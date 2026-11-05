@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exchange Rates · launch film</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #0B0C0D; --paper: #F4F4F2; --white: #FCFCFB; --muted: #8A8C8E; --line: #D9D9D6; --up: #1C8A52; --down: #D23A3F; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--ink); }
+  body { font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+  #frame { position: relative; overflow: hidden; background: var(--ink); }
+  #stage { position: absolute; left: 0; width: 1080px; height: 1080px; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .mono { font-family: "Geist Mono", monospace; font-variant-numeric: tabular-nums; }
+  .slam { font-weight: 600; letter-spacing: -.045em; line-height: .98; }
+  .flag { display: block; border-radius: 50%; }
+  /* ticker (constant) */
+  #ticker { position: absolute; left: 0; width: 1080px; height: 64px; background: #000; overflow: hidden; display: flex; align-items: center; border-top: 1px solid #222; }
+  #tick-date { position: relative; z-index: 2; height: 100%; display: flex; align-items: center; padding: 0 22px; background: #111; color: #fff; font: 500 20px "Geist Mono", monospace; letter-spacing: .04em; white-space: nowrap; border-right: 1px solid #2a2a2a; }
+  #tick-track { display: flex; white-space: nowrap; will-change: transform; }
+  .tk { display: inline-flex; align-items: center; gap: 10px; padding: 0 22px; font: 500 21px "Geist Mono", monospace; color: #D8D8D8; border-right: 1px solid #1d1d1d; }
+  .tk b { color: #fff; font-weight: 600; }
+  .tk i { font-style: normal; font-size: 18px; } .tk i.u { color: #3DD68C; } .tk i.d { color: #FF6166; }
+</style>
+</head>
+<body>
+<div id="frame">
+  <div id="topbar"></div>
+  <div id="stage"></div>
+  <div id="ticker"><span id="tick-date"></span><div id="tick-track"></div></div>
+</div>
+<script src="data.js"></script>
+<script>
+"use strict";
+const Q = new URLSearchParams(location.search);
+const FMT = Q.get("fmt") === "vertical" ? "vertical" : "square";
+const W = 1080, H = FMT === "vertical" ? 1920 : 1080;
+const STAGE_Y = FMT === "vertical" ? 380 : 0;           // the 1:1 stage sits in the vertical frame's safe middle
+const TICKER_Y = FMT === "vertical" ? 1470 : 1016;
+const D = window.DATA;
+let TL;
+
+/* ---------- math ---------- */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const outCubic = k => 1 - Math.pow(1 - k, 3);
+const outQuint = k => 1 - Math.pow(1 - k, 5);
+const inCubic = k => k * k * k;
+const inOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+function spring(dt, zeta = 0.78, f = 2.4) {           // closed-form, 0→1, dt in seconds since trigger
+  if (dt <= 0) return 0;
+  const w = 2 * Math.PI * f, wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * dt) * (Math.cos(wd * dt) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(wd * dt));
+}
+const fmt = (n, d) => { d = d ?? (n >= 100 ? 2 : n >= 1 ? 3 : 4); return n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }); };
+const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const stampDate = iso => { const d = new Date(iso + "T00:00:00"); return String(d.getDate()).padStart(2, "0") + " " + MON[d.getMonth()] + " " + d.getFullYear(); };
+const niceDate = iso => { const d = new Date(iso + "T00:00:00"); return d.getDate() + " " + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()] + " " + d.getFullYear(); };
+const flagSrc = f => `../web/flags/${f}.svg`;
+const B = id => TL.scenes.find(s => s.id === id);
+
+/* ---------- build DOM once ---------- */
+const stage = document.getElementById("stage");
+function el(html) { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
+const S = {};
+function scene(id, bg, html) { const n = el(`<div class="scene" id="s-${id}" style="background:${bg}">${html}</div>`); stage.appendChild(n); S[id] = n; return n; }
+const $ = sel => stage.querySelector(sel);
+
+function build() {
+  const frame = document.getElementById("frame");
+  frame.style.width = W + "px"; frame.style.height = H + "px";
+  stage.style.top = STAGE_Y + "px";
+  document.getElementById("ticker").style.top = TICKER_Y + "px";
+  if (FMT === "vertical") {
+    const tb = document.getElementById("topbar");
+    tb.style.cssText = "position:absolute;left:0;top:200px;width:1080px;text-align:center;font:500 30px Inter;color:#9a9a9a;letter-spacing:-.01em;z-index:3";
+    tb.textContent = "Exchange Rates · by Driftmark";
+  }
+
+  // ticker
+  const items = D.ticker.map(x => `<span class="tk"><img class="flag" src="${flagSrc(x.f)}" width="28" height="28"><b>${x.c}/TZS</b>${fmt(x.m)}<i class="${x.p >= 0 ? "u" : "d"}">${x.p >= 0 ? "▲" : "▼"} ${Math.abs(x.p).toFixed(2)}%</i></span>`).join("");
+  document.getElementById("tick-track").innerHTML = items + items + items;
+  document.getElementById("tick-date").textContent = "BOT · " + stampDate(D.date);
+
+  // 1 hook
+  scene("hook", "var(--ink)", `
+    <div style="position:absolute;left:80px;top:300px;color:#fff">
+      <div id="h1" class="slam" style="font-size:104px">BOT exchange rates</div>
+      <div id="h2" class="slam" style="font-size:104px;margin-top:8px">Now a <span style="background:#fff;color:#0B0C0D;padding:0 16px;border-radius:14px">free API</span></div>
+      <div id="h3" class="mono" style="font-size:52px;font-weight:500;margin-top:56px;color:#fff">driftmark.co.tz/exchange-rates</div>
+    </div>`);
+
+  // 2 count
+  scene("count", "var(--ink)", `
+    <div style="position:absolute;left:0;right:0;top:120px;text-align:center;color:#fff">
+      <div id="cnt" class="mono" style="font-size:300px;font-weight:600;letter-spacing:-.06em;line-height:1">44</div>
+      <div class="slam" style="font-size:96px;margin-top:6px">currencies</div>
+    </div>
+    <div id="flaggrid" style="position:absolute;left:70px;top:640px;width:940px;display:grid;grid-template-columns:repeat(14,56px);gap:16px 12px">
+      ${D.flags.map(f => `<img class="flag fg" src="${flagSrc(f)}" width="56" height="56">`).join("")}
+    </div>`);
+
+  // 3 source
+  scene("source", "var(--white)", `
+    <div style="position:absolute;left:80px;top:300px;color:#0B0C0D">
+      <div class="slam" style="font-size:96px">Daily from</div>
+      <div class="slam mono" style="font-size:112px;letter-spacing:-.04em;margin-top:10px">bot.go.tz</div>
+    </div>
+    <div id="stamp1" style="position:absolute;left:420px;top:640px;white-space:nowrap;padding:14px 26px;border:5px solid #0B0C0D;border-radius:16px;font:600 44px 'Geist Mono';letter-spacing:.04em;color:#0B0C0D;transform-origin:center">BOT · ${stampDate(D.date)}</div>`);
+
+  // 4 cards
+  scene("cards", "var(--paper)", `<div id="rail" style="position:absolute;top:330px;left:0;height:360px"></div>`);
+  const rail = $("#rail");
+  D.cards.forEach((c, i) => {
+    const lo = Math.min(...c.line), hi = Math.max(...c.line), span = hi - lo || 1;
+    const pts = c.line.map((v, j) => `${(j / (c.line.length - 1) * 520).toFixed(1)},${(120 - (v - lo) / span * 100).toFixed(1)}`).join(" ");
+    const col = c.pct >= 0 ? "var(--up)" : "var(--down)";
+    rail.appendChild(el(`<div class="card" style="position:absolute;top:0;width:520px;height:360px;border-radius:32px;background:#fff;box-shadow:0 30px 60px -30px rgba(0,0,0,.25);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:18px;padding:30px 32px 0">
+        <img class="flag" src="${flagSrc(c.code === "EUR" ? "european_union" : c.code === "GBP" ? "gb" : c.code.slice(0, 2).toLowerCase())}" width="60" height="60">
+        <div><div style="font:600 34px Inter;letter-spacing:-.02em">${c.code}</div><div style="font:400 24px Inter;color:#777">${c.name}</div></div>
+      </div>
+      <svg width="520" height="130" viewBox="0 0 520 130" style="position:absolute;left:0;top:118px"><defs><linearGradient id="g${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.pct >= 0 ? "#1C8A52" : "#D23A3F"}" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+        <polygon points="0,130 ${pts} 520,130" fill="url(#g${i})"/><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="4" stroke-linejoin="round"/></svg>
+      <div style="position:absolute;left:32px;bottom:30px;display:flex;align-items:baseline;gap:16px"><span class="mono" style="font-size:52px;font-weight:600;letter-spacing:-.03em">${fmt(c.mean)}</span><span class="mono" style="font-size:26px;color:${col}">${c.pct >= 0 ? "+" : "−"}${Math.abs(c.pct).toFixed(2)}%</span></div>
+      <div class="mono" style="position:absolute;right:30px;bottom:38px;font-size:20px;color:#999">TZS</div>
+    </div>`));
+  });
+
+  // 5 call
+  scene("call", "var(--ink)", `
+    <div style="position:absolute;left:80px;top:280px;color:#fff">
+      <div class="slam" style="font-size:120px">One call.</div>
+      <div style="margin-top:70px;padding:30px 36px;border:2px solid #2a2a2a;border-radius:20px;background:#121314;width:920px">
+        <span class="mono" style="font-size:56px;font-weight:500"><span style="color:#3DD68C">GET</span> <span id="typed"></span><span id="caret" style="display:inline-block;width:28px;height:56px;background:#fff;vertical-align:-8px;margin-left:4px"></span></span>
+      </div>
+    </div>`);
+
+  // 6 json
+  const jl = ['{', `  "date": "${D.date}",`, '  "base": "TZS",', '  "rates": ['].concat(
+    D.json.map((r, i) => `    { "code": "${r.code}", "mean": ${r.mean.toFixed(2)} }${i < D.json.length - 1 ? "," : ""}`), ['  ]', '}']);
+  scene("json", "var(--ink)", `<pre id="jsonbox" class="mono" style="position:absolute;left:90px;top:190px;font-size:36px;line-height:1.7;color:#cfcfcf">${jl.map((l, i) => `<div class="jl" data-usd="${l.includes('"USD"') ? 1 : 0}" style="padding:0 14px;border-radius:10px">${l.replace(/"([A-Z]{3})"/, '"<b style=\"color:inherit;font-weight:600\">$1</b>"')}</div>`).join("")}</pre>`);
+
+  // 7 dial
+  const ticks = []; const N = 90;
+  for (let i = 0; i < N; i++) {
+    const a = Math.PI + (i / (N - 1)) * Math.PI;
+    const r1 = 440, r2 = 520, cx = 540, cy = 900;
+    ticks.push(`<line class="tick" x1="${(cx + r1 * Math.cos(a)).toFixed(1)}" y1="${(cy + r1 * Math.sin(a)).toFixed(1)}" x2="${(cx + r2 * Math.cos(a)).toFixed(1)}" y2="${(cy + r2 * Math.sin(a)).toFixed(1)}" stroke-width="7" stroke-linecap="round"/>`);
+  }
+  scene("dial", "var(--paper)", `
+    <svg width="1080" height="1080" style="position:absolute;inset:0">${ticks.join("")}</svg>
+    <div style="position:absolute;left:0;right:0;top:520px;text-align:center;color:#0B0C0D">
+      <div class="mono" style="font:500 36px 'Geist Mono';color:#555;letter-spacing:.02em">USD → TZS</div>
+      <div id="dialval" class="mono" style="font-size:124px;font-weight:600;letter-spacing:-.05em;margin-top:14px">740.00</div>
+      <div id="dialfrom" class="mono" style="font-size:34px;color:#555;margin-top:18px">${niceDate(D.usdFirst.date)}</div>
+      <div id="dialto" class="mono" style="font-size:34px;color:#0B0C0D;margin-top:18px">${niceDate(D.usdLast.date)} · since 1999</div>
+    </div>`);
+
+  // 8 receipt → 9 widget (one object)
+  const rows = D.receipt.map(r => `<div class="rr" style="display:grid;grid-template-columns:110px 1fr 1fr;padding:9px 0;font:500 30px 'Geist Mono'"><b style="font-weight:600">${r.c}</b><span style="text-align:right">${fmt(r.b)}</span><span style="text-align:right">${fmt(r.s)}</span></div>`).join("");
+  scene("receipt", "var(--ink)", `
+    <div id="paper" style="position:absolute;left:250px;top:90px;width:580px;height:840px;background:#fbfbfa;color:#111;padding:44px 46px;box-shadow:0 40px 80px -30px rgba(0,0,0,.6);transform-origin:50% 0;
+      -webkit-mask: linear-gradient(#000,#000) top/100% calc(100% - 14px) no-repeat, conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/28px 14px repeat-x">
+      <div id="rcpt">
+        <div style="text-align:center;font:600 36px 'Geist Mono';letter-spacing:.12em">EXCHANGE RATES</div>
+        <div style="text-align:center;font:400 22px 'Geist Mono';color:#666;margin-top:8px">Bank of Tanzania reference rates</div>
+        <div style="border-top:3px dashed #bbb;margin:26px 0 14px"></div>
+        <div style="display:grid;grid-template-columns:110px 1fr 1fr;font:400 20px 'Geist Mono';color:#777;padding-bottom:6px"><span>CUR</span><span style="text-align:right">BUYING</span><span style="text-align:right">SELLING</span></div>
+        ${rows}
+        <div style="border-top:3px dashed #bbb;margin:16px 0 12px"></div>
+        <div style="font:400 20px 'Geist Mono';color:#777">TZS per 1 unit · source bot.go.tz</div>
+        <div style="height:110px"></div>
+      </div>
+      <div id="stamp2" style="position:absolute;left:70px;top:690px;white-space:nowrap;padding:14px 24px;border:6px solid #111;border-radius:14px;font:600 40px 'Geist Mono';letter-spacing:.04em;color:#111;mix-blend-mode:multiply">BOT · ${stampDate(D.date)}</div>
+      <div id="wgt" style="position:absolute;inset:0;padding:40px 44px;opacity:0">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font:600 40px Inter;letter-spacing:-.02em">Today’s rates</div><div style="padding:6px 14px;border:3px solid #111;border-radius:10px;font:500 22px 'Geist Mono'">BOT · ${stampDate(D.date)}</div></div>
+        <div style="display:grid;grid-template-columns:1fr 150px 150px;font:400 22px 'Geist Mono';color:#777;margin:30px 0 8px"><span>TZS per 1</span><span style="text-align:right">We buy</span><span style="text-align:right">We sell</span></div>
+        ${D.receipt.slice(0, 5).map(r => `<div style="display:grid;grid-template-columns:1fr 150px 150px;align-items:center;padding:16px 0;border-top:2px solid #eee"><span style="display:flex;align-items:center;gap:14px;font:600 30px Inter"><img class="flag" src="${flagSrc({USD:"us",EUR:"european_union",GBP:"gb",KES:"ke",UGX:"ug"}[r.c])}" width="44" height="44">${r.c}</span><span class="mono" style="text-align:right;font-size:28px">${fmt(r.b * 0.992)}</span><span class="mono" style="text-align:right;font-size:28px">${fmt(r.s * 1.012)}</span></div>`).join("")}
+        <div style="font:400 20px Inter;color:#888;margin-top:18px">Example bureau website · prices based on BOT reference rates</div>
+      </div>
+    </div>`);
+
+  // 10 convert
+  scene("convert", "var(--white)", `
+    <div style="position:absolute;left:80px;right:80px;top:300px">
+      <div style="display:flex;align-items:center;gap:26px"><img class="flag" src="${flagSrc("us")}" width="96" height="96"><span class="mono" style="font-size:110px;font-weight:600;letter-spacing:-.04em">100 USD</span></div>
+      <div class="mono" style="font-size:72px;color:#999;margin:18px 0 18px 120px">=</div>
+      <div style="display:flex;align-items:center;gap:26px"><img class="flag" src="${flagSrc("tz")}" width="96" height="96"><span id="convval" class="mono" style="font-size:110px;font-weight:600;letter-spacing:-.04em">${fmt(100 * D.usdLast.mean, 2)}</span></div>
+      <div class="mono" style="font-size:34px;color:#555;margin-top:40px">TZS at the BOT mean rate · ${niceDate(D.date)}</div>
+    </div>`);
+
+  // 11 cta
+  scene("cta", "var(--ink)", `
+    <div style="position:absolute;left:80px;top:300px;color:#fff">
+      <div id="c1" class="slam" style="font-size:120px">Free. No key.</div>
+      <div id="c2" class="slam" style="font-size:60px;color:#9a9a9a;margin-top:26px;letter-spacing:-.03em">API · converter · widget</div>
+      <div id="c3" class="mono" style="font-size:50px;font-weight:500;margin-top:70px;padding:20px 28px;border:3px solid #fff;border-radius:18px;display:inline-block;white-space:nowrap">driftmark.co.tz/exchange-rates</div>
+    </div>`);
+
+  // 12 end
+  scene("end", "var(--ink)", `
+    <div style="position:absolute;left:0;right:0;top:360px;text-align:center">
+      <img src="assets/driftmark-logo.png" style="height:120px;filter:brightness(0) invert(1)">
+      <div style="font:500 34px Inter;color:#cfcfcf;margin-top:30px;letter-spacing:-.01em">Exchange Rates, a project by Driftmark Technologies</div>
+    </div>
+    <div style="position:absolute;left:110px;right:110px;bottom:120px;text-align:center;font:400 22px/1.5 Inter;color:#8a8a8a">
+      Independent project. Not affiliated with or endorsed by the Bank of Tanzania.<br>BOT reference rates for information only; banks and bureaux set their own prices.
+    </div>`);
+}
+
+/* ---------- seek(t): the only source of state ---------- */
+function show(id, t) { const s = B(id); const on = t >= s.start && t < s.end; S[id].style.display = on ? "block" : "none"; return on; }
+function slamIn(node, dt, from = 1.18) {
+  const k = spring(dt, 0.8, 2.6);
+  node.style.opacity = dt < 0 ? 0 : 1;
+  node.style.transform = `scale(${lerp(from, 1, k)})`;
+  node.style.transformOrigin = "0 50%";
+}
+
+function seek(t) {
+  // ticker drifts continuously (linear: continuous motion), hidden on the end card
+  const end = B("end");
+  document.getElementById("ticker").style.display = t >= end.start ? "none" : "flex";
+  document.getElementById("topbar").style.display = t >= end.start ? "none" : "block";
+  const tr = document.getElementById("tick-track");
+  const setW = tr.scrollWidth / 3 || 1;
+  tr.style.transform = `translateX(${-((t * 110) % setW)}px)`;
+  const bgOf = { hook: "#0B0C0D", count: "#0B0C0D", source: "#FCFCFB", cards: "#F4F4F2", call: "#0B0C0D", json: "#0B0C0D", dial: "#F4F4F2", receipt: "#0B0C0D", widget: "#FCFCFB", convert: "#FCFCFB", cta: "#0B0C0D", end: "#0B0C0D" };
+  let current = TL.scenes.find(s => t >= s.start && t < s.end) || TL.scenes[TL.scenes.length - 1];
+  document.getElementById("frame").style.background = bgOf[current.id];
+  document.getElementById("topbar").style.color = ["source","cards","dial","widget","convert"].includes(current.id) ? "#777" : "#8a8a8a";
+
+  for (const s of TL.scenes) if (S[s.id]) S[s.id].style.display = "none";
+
+  // 1 hook: frame 0 is already the finished line (settling from a slight scale)
+  if (show("hook", t)) {
+    const b = B("hook").beats;
+    slamIn($("#h1"), t - b.l1 + 0.12);
+    slamIn($("#h2"), t - b.l2);
+    const k = outCubic(prog(t, b.url, b.url + 0.3));
+    $("#h3").style.opacity = t >= b.url ? 1 : 0; $("#h3").style.transform = `translateY(${(1 - k) * 24}px)`;
+  }
+  // 2 count
+  if (show("count", t)) {
+    const b = B("count").beats, k = outQuint(prog(t, b.roll, b.stop));
+    $("#cnt").textContent = Math.round(k * D.count);
+    stage.querySelectorAll(".fg").forEach((f, i) => {
+      const dt = t - (b.roll + i * 0.01);
+      f.style.opacity = dt < 0 ? 0 : 1; f.style.transform = `scale(${dt < 0 ? 0 : spring(dt, 0.6, 3.2)})`;
+    });
+  }
+  // 3 source
+  if (show("source", t)) {
+    const b = B("source").beats, dt = t - b.stamp, st = $("#stamp1");
+    st.style.opacity = dt < 0 ? 0 : 1;
+    st.style.transform = `rotate(-6deg) scale(${dt < 0 ? 1.8 : lerp(1.8, 1, outQuint(clamp(dt / 0.12)))})`;
+  }
+  // 4 cards: camera pans along the rail, each card arriving on its beat; ends centred on USD
+  if (show("cards", t)) {
+    const b = B("cards").beats, keys = ["c1", "c2", "c3", "c4", "c5"], gap = 560;
+    let idx = 0; keys.forEach((k, i) => { if (t >= b[k]) idx = i; });
+    const kk = outCubic(prog(t, b[keys[idx]], b[keys[idx]] + 0.35));
+    const prev = Math.max(0, idx - 1);
+    const focus = t < b.c1 ? 0 : lerp(idx === 0 ? -0.6 : prev, idx, kk);
+    stage.querySelectorAll(".card").forEach((c, i) => {
+      const off = i - focus, x = 540 - 260 + off * gap;
+      const settle = t >= b.settle ? spring(t - b.settle, 0.85, 2) : 0;
+      const sc = (Math.abs(off) < 0.5 ? 1 : 0.86) + (i === 4 ? 0.08 * settle : 0);
+      c.style.transform = `translateX(${x}px) scale(${lerp(0.86, sc, clamp(1 - Math.abs(off)))})`;
+      c.style.opacity = clamp(1 - Math.abs(off) * 0.45, 0.25, 1);
+      c.style.filter = `blur(${clamp(Math.abs(off) - 0.3, 0, 1) * 6}px)`;
+    });
+  }
+  // 5 call: types the path, caret blinks on the beat
+  if (show("call", t)) {
+    const b = B("call").beats, path = "/api/latest.json";
+    const n = Math.round(path.length * prog(t, b.title, b.typed));
+    $("#typed").textContent = path.slice(0, n);
+    $("#caret").style.opacity = (t - b.typed) > 0 && Math.floor((t - b.typed) / 0.25) % 2 ? 0 : 1;
+  }
+  // 6 json streams in, USD row lights up
+  if (show("json", t)) {
+    const b = B("json").beats;
+    stage.querySelectorAll(".jl").forEach((l, i) => {
+      const dt = t - (b.stream + i * 0.05);
+      l.style.opacity = dt < 0 ? 0 : 1; l.style.transform = `translateY(${dt < 0 ? 12 : (1 - outCubic(clamp(dt / .2))) * 12}px)`;
+      const on = l.dataset.usd === "1" && t >= b.usd;
+      l.style.background = on ? "#fff" : "transparent"; l.style.color = on ? "#0B0C0D" : (l.dataset.usd === "0" && /"[A-Z]{3}"/.test(l.textContent) ? "#fff" : "");
+    });
+  }
+  // 7 dial: 740 → 2,640.37; date label only once the counter has stopped
+  if (show("dial", t)) {
+    const b = B("dial").beats, k = inOut(prog(t, b.count, b.stop));
+    const v = lerp(D.usdFirst.mean, D.usdLast.mean, k);
+    $("#dialval").textContent = fmt(t >= b.stop ? D.usdLast.mean : v, 2);
+    $("#dialfrom").style.display = t < b.count ? "block" : "none";
+    $("#dialto").style.display = t >= b.stop ? "block" : "none";
+    const lit = Math.round(k * 89);
+    stage.querySelectorAll(".tick").forEach((l, i) => l.setAttribute("stroke", i <= lit && t >= b.count ? "#0B0C0D" : "#D4D4D1"));
+  }
+  // 8 receipt prints, stamp lands (hero) · 9 the same paper becomes the widget
+  const rs = B("receipt"), ws = B("widget");
+  if (t >= rs.start && t < ws.end) {
+    S.receipt.style.display = "block";
+    const paper = $("#paper"), rb = rs.beats, wb = ws.beats;
+    const pk = outCubic(prog(t, rb.print, rb.print + 0.8));
+    const m = inOut(prog(t, wb.morph, wb.done));
+    const shake = t >= rb.stamp && t < rb.stamp + 0.15 ? Math.sin((t - rb.stamp) * 120) * 6 * (1 - (t - rb.stamp) / 0.15) : 0;
+    paper.style.transform = `translate(${lerp(0, -70, m)}px, ${lerp(-820 * (1 - pk), 0, 1) + lerp(0, 60, m) + shake}px) rotate(${lerp(-3, 0, m)}deg) scale(${lerp(1, 1.1, m)})`;
+    paper.style.width = lerp(580, 720, m) + "px";
+    paper.style.height = lerp(840, 690, m) + "px";
+    paper.style.borderRadius = lerp(0, 28, m) + "px";
+    paper.style.webkitMaskSize = m > 0 ? `100% 100%, 28px ${14 * (1 - m)}px` : "";
+    S.receipt.style.background = m > 0 ? `rgb(${lerp(11, 252, m)},${lerp(12, 252, m)},${lerp(13, 251, m)})` : "#0B0C0D";
+    // rows appear as the paper leaves the printer
+    stage.querySelectorAll(".rr").forEach((r, i) => { r.style.opacity = t >= rb.print + 0.25 + i * 0.07 ? 1 : 0; });
+    const sdt = t - rb.stamp, st = $("#stamp2");
+    st.style.opacity = sdt < 0 ? 0 : (1 - m) * 0.92;
+    st.style.transform = `rotate(-9deg) scale(${sdt < 0 ? 2 : lerp(2, 1, outQuint(clamp(sdt / 0.1)))})`;
+    $("#rcpt").style.opacity = 1 - clamp(m * 2);
+    $("#wgt").style.opacity = clamp(m * 2 - 1);
+    document.getElementById("frame").style.background = m > 0 ? "#FCFCFB" : "#0B0C0D";
+  }
+  // 10 convert: result is on screen from the cut
+  if (show("convert", t)) {
+    const dt = t - B("convert").beats.type;
+    $("#convval").style.transform = `translateY(${(1 - outCubic(clamp(dt / 0.25))) * 18}px)`;
+  }
+  // 11 cta
+  if (show("cta", t)) {
+    const b = B("cta").beats;
+    slamIn($("#c1"), t - b.in + 0.05);
+    $("#c2").style.opacity = t >= b.in + 0.25 ? 1 : 0;
+    $("#c3").style.opacity = 1;
+  }
+  show("end", t);
+}
+
+window.DUR = 32; window.FPS = 30; window.seek = seek;
+window.READY = (async () => {
+  TL = await (await fetch("timeline.json")).json();
+  window.DUR = TL.meta.dur; window.FPS = TL.meta.fps;
+  build();
+  await document.fonts.ready;
+  await Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+  seek(Number(Q.get("t") || 0));
+  return true;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,623 @@
+{
+ "meta": {
+  "w": 1080,
+  "h": 1080,
+  "fps": 30,
+  "dur": 32.0,
+  "clock": "music",
+  "register": "kinetic",
+  "loop": false,
+  "bpm": 120,
+  "meter": "4/4",
+  "bars": 16,
+  "t0": 0.0,
+  "grid": "designed",
+  "hookWaiver": null
+ },
+ "objects": [
+  {
+   "id": "ticker",
+   "role": "constant",
+   "what": "black strip of flags and BOT rates scrolling along the bottom"
+  },
+  {
+   "id": "receipt",
+   "role": "hero",
+   "what": "thermal receipt printed with the latest BOT rates, stamped, then becomes the widget"
+  },
+  {
+   "id": "usd",
+   "role": "bridge",
+   "what": "USD/TZS value: card, JSON row, dial, receipt first row, converter"
+  }
+ ],
+ "scenes": [
+  {
+   "id": "hook",
+   "start": 0.0,
+   "end": 4.0,
+   "beats": {
+    "l1": 0.0,
+    "l2": 0.5,
+    "url": 1.0
+   },
+   "cueRef": {
+    "l1": "bar1",
+    "l2": "bar1.beat2",
+    "url": "bar1.beat3"
+   },
+   "reads": [
+    {
+     "what": "BOT exchange rates",
+     "from": 0.0,
+     "to": 4.0
+    },
+    {
+     "what": "Now a free API",
+     "from": 0.5,
+     "to": 4.0
+    },
+    {
+     "what": "URL",
+     "from": 1.0,
+     "to": 4.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "next fact: how many currencies"
+   }
+  },
+  {
+   "id": "count",
+   "start": 4.0,
+   "end": 6.0,
+   "beats": {
+    "roll": 4.0,
+    "stop": 4.4
+   },
+   "cueRef": {
+    "roll": "bar3",
+    "stop": "bar3+0.4"
+   },
+   "reads": [
+    {
+     "what": "44 currencies",
+     "from": 4.4,
+     "to": 6.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "where they come from"
+   }
+  },
+  {
+   "id": "source",
+   "start": 6.0,
+   "end": 8.0,
+   "beats": {
+    "text": 6.0,
+    "stamp": 6.5
+   },
+   "cueRef": {
+    "text": "bar4",
+    "stamp": "bar4.beat2"
+   },
+   "reads": [
+    {
+     "what": "Daily from bot.go.tz",
+     "from": 6.0,
+     "to": 8.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "show the rates themselves"
+   }
+  },
+  {
+   "id": "cards",
+   "start": 8.0,
+   "end": 12.0,
+   "beats": {
+    "c1": 8.0,
+    "c2": 8.5,
+    "c3": 9.0,
+    "c4": 9.5,
+    "c5": 10.0,
+    "settle": 10.5
+   },
+   "cueRef": {
+    "c1": "bar5",
+    "settle": "bar6.beat2"
+   },
+   "reads": [
+    {
+     "what": "USD card 2,640.37",
+     "from": 10.5,
+     "to": 12.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "turn: from what it has to how simple it is"
+   }
+  },
+  {
+   "id": "call",
+   "start": 12.0,
+   "end": 14.0,
+   "beats": {
+    "title": 12.0,
+    "typed": 12.4
+   },
+   "cueRef": {
+    "title": "bar7",
+    "typed": "bar7+0.4"
+   },
+   "reads": [
+    {
+     "what": "One call",
+     "from": 12.0,
+     "to": 14.0
+    },
+    {
+     "what": "GET /api/latest.json",
+     "from": 12.4,
+     "to": 14.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "the call's answer"
+   }
+  },
+  {
+   "id": "json",
+   "start": 14.0,
+   "end": 16.0,
+   "beats": {
+    "stream": 14.0,
+    "usd": 14.75
+   },
+   "cueRef": {
+    "stream": "bar8",
+    "usd": "bar8.beat2+0.25"
+   },
+   "reads": [
+    {
+     "what": "USD row",
+     "from": 14.75,
+     "to": 16.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "the USD value grows into its history"
+   }
+  },
+  {
+   "id": "dial",
+   "start": 16.0,
+   "end": 22.0,
+   "beats": {
+    "label": 16.0,
+    "count": 17.0,
+    "stop": 20.0,
+    "silence": 21.5
+   },
+   "cueRef": {
+    "count": "bar9.beat3",
+    "stop": "bar11",
+    "silence": "bar11.beat4"
+   },
+   "reads": [
+    {
+     "what": "740.00 24 Jun 1999",
+     "from": 16.0,
+     "to": 17.0
+    },
+    {
+     "what": "2,640.37 5 Nov 2026",
+     "from": 20.0,
+     "to": 22.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "silence breaks into the payoff"
+   }
+  },
+  {
+   "id": "receipt",
+   "start": 22.0,
+   "end": 24.5,
+   "beats": {
+    "print": 22.0,
+    "stamp": 23.0
+   },
+   "cueRef": {
+    "print": "bar12 (drop)",
+    "stamp": "bar12.beat3"
+   },
+   "reads": [
+    {
+     "what": "receipt rows",
+     "from": 22.8,
+     "to": 24.5
+    },
+    {
+     "what": "BOT stamp date",
+     "from": 23.1,
+     "to": 24.5
+    }
+   ],
+   "transitionOut": {
+    "type": "morph",
+    "dur": 0.5,
+    "why": "the receipt itself becomes the widget",
+    "bridge": "receipt"
+   }
+  },
+  {
+   "id": "widget",
+   "start": 24.5,
+   "end": 26.0,
+   "beats": {
+    "morph": 24.5,
+    "done": 25.0
+   },
+   "cueRef": {
+    "morph": "bar13.beat2",
+    "done": "bar13.beat3"
+   },
+   "reads": [
+    {
+     "what": "We buy / We sell widget",
+     "from": 25.0,
+     "to": 26.0
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "another thing the same rates power"
+   }
+  },
+  {
+   "id": "convert",
+   "start": 26.0,
+   "end": 28.5,
+   "beats": {
+    "type": 26.0,
+    "result": 26.0
+   },
+   "cueRef": {
+    "type": "bar14",
+    "result": "bar14"
+   },
+   "reads": [
+    {
+     "what": "100 USD = 264,037.38 TZS",
+     "from": 26.0,
+     "to": 28.5
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "call to action"
+   }
+  },
+  {
+   "id": "cta",
+   "start": 28.5,
+   "end": 30.5,
+   "beats": {
+    "in": 28.5
+   },
+   "cueRef": {
+    "in": "bar15.beat2"
+   },
+   "reads": [
+    {
+     "what": "Free. No key.",
+     "from": 28.5,
+     "to": 30.5
+    },
+    {
+     "what": "URL",
+     "from": 28.5,
+     "to": 30.5
+    }
+   ],
+   "transitionOut": {
+    "type": "hard cut",
+    "dur": 0.0,
+    "why": "sign-off"
+   }
+  },
+  {
+   "id": "end",
+   "start": 30.5,
+   "end": 32.0,
+   "beats": {
+    "in": 30.5
+   },
+   "cueRef": {
+    "in": "bar16.beat2"
+   },
+   "reads": [
+    {
+     "what": "Driftmark wordmark",
+     "from": 30.5,
+     "to": 32.0
+    }
+   ],
+   "transitionOut": {
+    "type": "end",
+    "dur": 0.0,
+    "why": "end"
+   }
+  }
+ ],
+ "cuts": [
+  4.0,
+  6.0,
+  8.0,
+  12.0,
+  14.0,
+  16.0,
+  22.0,
+  26.0,
+  28.5,
+  30.5
+ ],
+ "hero": {
+  "t": 23.0,
+  "what": "BOT date stamp lands on the printed receipt"
+ },
+ "silences": [
+  {
+   "from": 21.5,
+   "to": 22.0
+  }
+ ],
+ "texts": [
+  {
+   "id": "hook1",
+   "text": "BOT exchange rates",
+   "from": 0.0,
+   "to": 4.0,
+   "role": "hook",
+   "px": 104,
+   "box": [
+    80,
+    290,
+    921,
+    120
+   ]
+  },
+  {
+   "id": "hook2",
+   "text": "Now a free API",
+   "from": 0.5,
+   "to": 4.0,
+   "role": "hook",
+   "px": 104,
+   "box": [
+    80,
+    400,
+    691,
+    120
+   ]
+  },
+  {
+   "id": "url1",
+   "text": "driftmark.co.tz/exchange-rates",
+   "from": 1.0,
+   "to": 4.0,
+   "role": "cta",
+   "px": 52,
+   "box": [
+    80,
+    566,
+    936,
+    66
+   ]
+  },
+  {
+   "id": "count",
+   "text": "44 currencies",
+   "from": 4.4,
+   "to": 6.0,
+   "role": null,
+   "px": 120
+  },
+  {
+   "id": "source",
+   "text": "Daily from bot.go.tz",
+   "from": 6.0,
+   "to": 8.0,
+   "role": "term",
+   "px": 96,
+   "box": [
+    80,
+    292,
+    426,
+    110
+   ]
+  },
+  {
+   "id": "call",
+   "text": "One call",
+   "from": 12.0,
+   "to": 14.0,
+   "role": null,
+   "px": 120
+  },
+  {
+   "id": "get",
+   "text": "GET /api/latest.json",
+   "from": 12.4,
+   "to": 14.0,
+   "role": "term",
+   "px": 56,
+   "box": [
+    118,
+    500,
+    704,
+    73
+   ]
+  },
+  {
+   "id": "conv",
+   "text": "100 USD = 264,037.38 TZS",
+   "from": 26.0,
+   "to": 28.5,
+   "role": "term",
+   "px": 72,
+   "box": [
+    202,
+    572,
+    616,
+    143
+   ]
+  },
+  {
+   "id": "cta1",
+   "text": "Free. No key.",
+   "from": 28.5,
+   "to": 30.5,
+   "role": null,
+   "px": 120
+  },
+  {
+   "id": "cta2",
+   "text": "driftmark.co.tz/exchange-rates",
+   "from": 28.5,
+   "to": 30.5,
+   "role": "cta",
+   "px": 50,
+   "box": [
+    111,
+    595,
+    900,
+    65
+   ]
+  }
+ ],
+ "terms": [
+  "BOT exchange rates",
+  "free API",
+  "USD"
+ ],
+ "sfx": [
+  {
+   "at": "hook.l1",
+   "offset": 0.0,
+   "src": "slam",
+   "gain": -16,
+   "why": "hook slam"
+  },
+  {
+   "at": "hook.l2",
+   "offset": 0.0,
+   "src": "slam",
+   "gain": -18,
+   "why": "second line"
+  },
+  {
+   "at": "count.roll",
+   "offset": 0.0,
+   "src": "ticks",
+   "gain": -14,
+   "why": "flags pop"
+  },
+  {
+   "at": "source.stamp",
+   "offset": 0.0,
+   "src": "thunk",
+   "gain": -10,
+   "why": "stamp"
+  },
+  {
+   "at": "cards.c1",
+   "offset": 0.0,
+   "src": "whoosh",
+   "gain": -14,
+   "why": "card"
+  },
+  {
+   "at": "cards.c3",
+   "offset": 0.0,
+   "src": "whoosh",
+   "gain": -14,
+   "why": "card"
+  },
+  {
+   "at": "cards.c5",
+   "offset": 0.0,
+   "src": "whoosh",
+   "gain": -14,
+   "why": "card"
+  },
+  {
+   "at": "call.title",
+   "offset": 0.0,
+   "src": "keys",
+   "gain": -16,
+   "why": "typing"
+  },
+  {
+   "at": "json.stream",
+   "offset": 0.0,
+   "src": "blips",
+   "gain": -16,
+   "why": "data"
+  },
+  {
+   "at": "dial.count",
+   "offset": 0.0,
+   "src": "riser",
+   "gain": -10,
+   "why": "build to the stop"
+  },
+  {
+   "at": "receipt.print",
+   "offset": 0.0,
+   "src": "printer",
+   "gain": -12,
+   "why": "printing"
+  },
+  {
+   "at": "receipt.stamp",
+   "offset": 0.0,
+   "src": "hero",
+   "gain": 3,
+   "why": "payoff, loudest"
+  },
+  {
+   "at": "widget.morph",
+   "offset": 0.0,
+   "src": "tear",
+   "gain": -10,
+   "why": "paper becomes widget"
+  },
+  {
+   "at": "cta.in",
+   "offset": 0.0,
+   "src": "slam",
+   "gain": -16,
+   "why": "CTA"
+  }
+ ]
+}

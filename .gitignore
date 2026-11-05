@@ -1,3 +1,10 @@
 _site/
 __pycache__/
 .DS_Store
+
+# ad build outputs
+ad/node_modules/
+ad/out/
+ad/stills/
+ad/qa/
+ad/qa-vertical/
