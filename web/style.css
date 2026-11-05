@@ -322,7 +322,14 @@ h2 { font-weight: 600; letter-spacing: -.035em; }
   .ticker-viewport { overflow-x: auto; }
   .ticker-set[aria-hidden] { display: none; }
 }
-@media (max-width: 600px) { .ticker { height: 40px; font-size: 12px; } .ticker-date { padding: 0 12px; } .tick { padding: 0 14px; } }
+@media (max-width: 600px) {
+  .ticker { height: 40px; font-size: 12px; }
+  .ticker-date { display: none; }  /* the same BOT date sits in the stamp right below */
+  .ticker-viewport { -webkit-mask-image: none; mask-image: none; }
+  .tick { gap: 6px; padding: 0 12px; }
+  .tick .flag { width: 16px; height: 16px; }
+  .ticker-track { animation-duration: 90s; }
+}
 
 /* ---------- Converter + currency pages ---------- */
 .converter { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 12px 16px; padding: 20px; }
