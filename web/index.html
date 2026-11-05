@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Exchange Rates · Tanzania</title>
-<meta name="description" content="Bank of Tanzania official daily exchange rates as a free API, website widget and history back to 1999. Built for bureaus, fintech, accounting and AI agents.">
-<meta property="og:title" content="Exchange Rates · Tanzania">
-<meta property="og:description" content="Official BOT exchange rates in one API call. Free, daily, history since 1999.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%236D8BFF'/><stop offset='1' stop-color='%233651F0'/></linearGradient></defs><rect width='32' height='32' rx='9' fill='url(%23g)'/><path d='M9 12h12l-3-3M23 20H11l3 3' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
-<link rel="alternate" type="text/plain" href="llms.txt" title="LLM guide">
+<title>Exchange Rates · BOT rates API for Tanzania</title>
+<meta name="description" content="Bank of Tanzania daily reference exchange rates as a free JSON/CSV API, a website widget and a history back to 1999. An independent project by Driftmark Technologies, not affiliated with BOT.">
+<meta property="og:title" content="Exchange Rates · BOT rates API for Tanzania">
+<meta property="og:description" content="Bank of Tanzania reference rates as a free API, widget and history since 1999. Independent project by Driftmark Technologies.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233F4F4E'/><circle cx='16' cy='16' r='9' fill='none' stroke='%23ECEADB' stroke-width='2.2'/><path d='M11.5 14h9l-2.5-2.5M20.5 18h-9l2.5 2.5' fill='none' stroke='%23ECEADB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="alternate" type="text/plain" href="llms.txt" title="Guide for AI assistants">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,185 +19,173 @@
 
 <header class="nav">
   <a class="brand" href="./" aria-label="Exchange Rates home">
-    <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 9h13l-3.5-3.5M19 15H6l3.5 3.5"/></svg></span>
-    <span>Exchange Rates<small>Tanzania</small></span>
+    <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 10h9l-2.5-2.5M16.5 14h-9l2.5 2.5"/></svg>
+    Exchange Rates
   </a>
   <nav aria-label="Sections">
-    <a href="#rates">Rates</a><a href="#insights">Insights</a><a href="#uses">Use cases</a><a href="#api">API</a><a href="#widget">Widget</a>
+    <a href="#rates">Rates</a><a href="#history">History</a><a href="#uses">Use cases</a><a href="#api">API</a><a href="#widget">Widget</a>
   </nav>
-  <a class="btn btn-primary btn-sm nav-cta" href="#api">Get the API</a>
+  <a class="btn btn-sm" href="https://github.com/africanuspanga/bot-rates" rel="noopener">GitHub</a>
 </header>
 
 <main>
-  <!-- Hero -->
   <section class="hero">
     <div class="hero-copy">
-      <span class="pill"><span class="dot" aria-hidden="true"></span><span id="hero-updated">Bank of Tanzania rates, updated daily</span></span>
-      <h1>Tanzania’s official exchange rates, <span class="grad">one API call away.</span></h1>
-      <p class="lede">Every trading day the Bank of Tanzania publishes reference rates for 44 currencies. We turn them into a free API, a website widget and 27 years of history, for bureaus, fintech, accountants and AI agents.</p>
+      <p class="status" id="status"><span class="stamp-sm" id="status-stamp">BOT · –</span><span id="status-text">Fetching the latest BOT rates</span></p>
+      <h1>Bank of Tanzania exchange rates, ready for your code</h1>
+      <p class="lede">BOT publishes reference rates for 44 currencies on its website every day. We fetch them, check them and serve them as a free API, a website widget and a history back to June 1999. An independent project, not affiliated with the Bank of Tanzania.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="#api">Start with the API</a>
-        <a class="btn" href="#widget">Add rates to a website</a>
-      </div>
-      <dl class="mini-stats" id="mini-stats">
-        <div><dt>Currencies</dt><dd>44</dd></div>
-        <div><dt>History since</dt><dd>1999</dd></div>
-        <div><dt>Days on record</dt><dd id="days-count">10,000</dd></div>
-        <div><dt>Price</dt><dd>Free</dd></div>
-      </dl>
-    </div>
-
-    <div class="hero-card card" aria-label="US dollar today">
-      <div class="tiles">
-        <div class="tile"><span class="ico ico-orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M17 7.5c0-1.9-2.2-3-5-3s-5 1.1-5 3 2.2 2.8 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg></span><span class="tile-l">BOT buying</span><b id="h-buy">–</b></div>
-        <div class="tile"><span class="ico ico-green" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="tile-l">BOT selling</span><b id="h-sell">–</b></div>
-        <div class="tile"><span class="ico ico-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 16l5-5 4 4 7-7M15 8h5v5"/></svg></span><span class="tile-l">Since yesterday</span><b id="h-chg">–</b></div>
-      </div>
-      <div class="bars-wrap">
-        <div class="bars-head"><span>USD → TZS, monthly average</span><span id="bars-note"></span></div>
-        <div class="bars" id="hero-bars" role="img" aria-label="Monthly average US dollar rate"></div>
+        <a class="btn btn-primary" href="#api">Read the API</a>
+        <a class="btn" href="#widget">Add the widget</a>
       </div>
     </div>
+    <figure class="receipt" id="receipt">
+      <img src="receipt.svg" width="560" height="760" alt="Receipt showing the latest Bank of Tanzania reference rates for eight currencies, with a BOT date stamp" fetchpriority="high">
+    </figure>
   </section>
 
-  <!-- Rates -->
   <section id="rates" class="section">
     <div class="head">
-      <div><p class="eyebrow">Today</p><h2>All currencies</h2><p class="sub" id="rates-sub">TZS per 1 unit. Select a currency to see its history.</p></div>
-      <div class="head-tools">
-        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="sr">Search currencies</span><input id="search" type="search" placeholder="Search USD, euro, kenya…" autocomplete="off"></label>
+      <div>
+        <h2>Latest rates</h2>
+        <p class="sub" id="rates-sub">TZS per 1 unit of foreign currency</p>
+      </div>
+      <div class="tools">
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><span class="sr">Search currencies</span><input id="search" type="search" placeholder="Search" autocomplete="off"></label>
         <a class="btn btn-sm" href="api/latest.csv" download>Download CSV</a>
       </div>
     </div>
-    <div class="feature-row" id="featured"></div>
-    <div class="card table-card">
+    <div class="stats" id="stats"></div>
+    <div class="panel table-panel">
       <table class="rates">
-        <thead><tr><th scope="col">Currency</th><th scope="col" class="n">Buying</th><th scope="col" class="n">Selling</th><th scope="col" class="n hide-sm">Mean</th><th scope="col" class="n">24h</th></tr></thead>
-        <tbody id="rates-body"><tr><td colspan="5" class="empty">Loading today’s rates…</td></tr></tbody>
+        <thead><tr><th scope="col">Currency</th><th scope="col" class="n">Buying</th><th scope="col" class="n">Selling</th><th scope="col" class="n hide-sm">Mean</th><th scope="col" class="n" id="chg-head">Change</th></tr></thead>
+        <tbody id="rates-body"><tr><td colspan="5" class="empty">Loading rates</td></tr></tbody>
       </table>
       <button class="more" id="more" hidden>Show all currencies</button>
     </div>
   </section>
 
-  <!-- Insights -->
-  <section id="insights" class="section">
+  <section id="history" class="section">
     <div class="head">
-      <div><p class="eyebrow">27 years of data</p><h2 id="ins-title">The shilling against the US Dollar</h2><p class="sub">Every BOT rate since 24 June 1999. Pick a currency and a period.</p></div>
-      <div class="head-tools">
-        <label class="select"><span class="sr">Currency</span><select id="ins-cur"></select></label>
+      <div>
+        <h2 id="hist-title">US Dollar since 1999</h2>
+        <p class="sub">Mean BOT rate in TZS for every day since 24 June 1999</p>
+      </div>
+      <div class="tools">
+        <label class="select"><span class="sr">Currency</span><select id="cur"></select></label>
         <div class="seg" role="group" aria-label="Period" id="ranges">
-          <button data-r="30">1M</button><button data-r="365" aria-pressed="true">1Y</button><button data-r="1826">5Y</button><button data-r="0">All</button>
+          <button data-r="30">1M</button><button data-r="365">1Y</button><button data-r="1826">5Y</button><button data-r="0" aria-pressed="true">All</button>
         </div>
       </div>
     </div>
 
-    <div class="ins-grid">
-      <div class="card chart-card">
-        <div class="chart-top">
-          <div><span class="tile-l">Mean rate</span><b class="big" id="ins-now">–</b></div>
-          <span class="delta" id="ins-delta"></span>
+    <div class="panel chart-panel">
+      <div class="chart-head">
+        <div><p class="label" id="chart-label">Mean rate</p><p class="figure" id="chart-now">–</p></div>
+        <p class="meta" id="chart-delta"></p>
+      </div>
+      <div class="chart" id="chart" role="img" aria-label="Rate history chart"></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+
+    <div class="below">
+      <div class="panel">
+        <div class="panel-head"><h3>Yearly average</h3><span class="meta">TZS per 1 <span id="y-code">USD</span></span></div>
+        <ol class="years" id="years"></ol>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Records</h3><span class="meta" id="rec-range"></span></div>
+        <dl class="records" id="records"></dl>
+        <div class="days">
+          <div class="panel-head"><h3 id="days-title">Daily moves this year</h3></div>
+          <div class="days-bar" id="days-bar"></div>
+          <p class="meta" id="days-legend"></p>
         </div>
-        <div class="chart" id="chart" role="img" aria-label="Rate history chart"></div>
-        <div class="tip" id="tip" hidden></div>
-      </div>
-
-      <div class="card gauge-card">
-        <p class="card-title">Shilling vs <span id="g-code">USD</span> in <span id="g-year"></span></p>
-        <div class="gauge" id="gauge"></div>
-        <div class="gauge-legend" id="gauge-legend"></div>
-      </div>
-
-      <div class="card years-card">
-        <div class="card-head"><p class="card-title">Yearly average</p><span class="sub-sm" id="years-note">Tap a bar</span></div>
-        <div class="bars bars-tall" id="year-bars" role="img" aria-label="Yearly average rate"></div>
-      </div>
-
-      <div class="card facts-card">
-        <p class="card-title">Records</p>
-        <ul class="records" id="records"></ul>
         <div class="lookup">
           <label for="lookup-date">Rate on a date</label>
           <input id="lookup-date" type="date" min="1999-06-24">
-          <output id="lookup-out" for="lookup-date">Pick any day since 24 June 1999.</output>
+          <output id="lookup-out" for="lookup-date">Any day since 24 June 1999</output>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Use cases -->
   <section id="uses" class="section">
-    <div class="head"><div><p class="eyebrow">Who it’s for</p><h2>One rate, many jobs</h2><p class="sub">BOT publishes one official reference rate per day. That is exactly what these people need, and most of them still copy it by hand.</p></div></div>
-    <div class="uses">
-      <article class="use card"><span class="ico ico-orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><h3>Tax and customs</h3><p>Convert invoices, VAT and import values at the BOT rate for the right day, inside accounting and clearing software.</p></article>
-      <article class="use card"><span class="ico ico-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg></span><h3>Fintech and mobile money</h3><p>Show the official rate next to your own, benchmark FX spreads and pull history for compliance reports.</p></article>
-      <article class="use card"><span class="ico ico-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9h18M9 20v-6h6v6"/></svg></span><h3>Bureaux de change</h3><p>Paste one line and the shop’s website shows today’s buy and sell prices with your own margin.</p></article>
-      <article class="use card"><span class="ico ico-pink" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2.5 3.5h3l2.5 12h11l2-8H7"/></svg></span><h3>Shops, hotels and tours</h3><p>Quote in dollars, show the shilling price automatically. Safari operators and online stores stay current.</p></article>
-      <article class="use card"><span class="ico ico-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 15h2"/></svg></span><h3>Payroll, fees and rent</h3><p>Salaries, school fees and leases set in USD get converted at a rate everyone can verify.</p></article>
-      <article class="use card"><span class="ico ico-orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><h3>Research and journalism</h3><p>Chart the shilling since 1999 for stories, theses and policy work. CSV for every year.</p></article>
-      <article class="use card"><span class="ico ico-green" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></span><h3>Spreadsheets</h3><p>Load today’s rates or a whole year into Google Sheets or Excel with a single formula.</p></article>
-      <article class="use card"><span class="ico ico-pink" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 7V4M9 13h.01M15 13h.01"/></svg></span><h3>AI agents and chat bots</h3><p>A plain-text guide and OpenAPI spec let ChatGPT, Claude and WhatsApp bots answer “dola leo?” correctly.</p></article>
-    </div>
+    <div class="head"><div><h2>Who uses one daily rate</h2><p class="sub">BOT publishes one reference rate per currency per day. Plenty of work in Tanzania depends on it, and most of it still copies the number by hand.</p></div></div>
+    <ul class="uses">
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg><div><h3>Tax and customs</h3><p>Convert invoices, VAT and import values at the BOT rate for the right date</p></div></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg><div><h3>Fintech and mobile money</h3><p>Show the reference rate next to your own and keep history for compliance reports</p></div></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9h18M9 20v-6h6v6"/></svg><div><h3>Bureaux de change</h3><p>Show buy and sell prices on the shop’s website with your own margin on top</p></div></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2.5 3.5h3l2.5 12h11l2-8H7"/></svg><div><h3>Shops, hotels and tours</h3><p>Quote in dollars and show the shilling price beside it</p></div></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/></svg><div><h3>Payroll, fees and rent</h3><p>Convert USD salaries, school fees and leases at a rate both sides can check</p></div></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><div><h3>Research and journalism</h3><p>27 years of daily rates as CSV, one file per year</p></div></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg><div><h3>Spreadsheets</h3><p>Load the latest rates into Google Sheets or Excel with one formula</p></div></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v10H8l-4 4z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></svg><div><h3>AI assistants and chat bots</h3><p>A plain-text guide and an OpenAPI spec so a bot can answer “dola leo?” with a dated BOT rate</p></div></li>
+    </ul>
   </section>
 
-  <!-- API -->
   <section id="api" class="section">
-    <div class="head"><div><p class="eyebrow">Developers</p><h2>The API</h2><p class="sub">Plain JSON and CSV over HTTPS. Open endpoints work today with no key. Personal API keys with usage stats are coming with exchangerates.co.tz.</p></div></div>
-
-    <div class="api-grid">
-      <div class="card endpoints-card">
+    <div class="head"><div><h2>API</h2><p class="sub">Plain JSON and CSV over HTTPS. No key and no sign-up for these endpoints. Personal API keys with usage stats are planned.</p></div></div>
+    <div class="api">
+      <div class="panel">
         <ul class="endpoints" id="endpoints"></ul>
       </div>
-      <div class="card code-card">
+      <div class="panel code-panel">
         <div class="tabs" role="tablist" aria-label="Code examples">
           <button role="tab" aria-selected="true" data-lang="js">JavaScript</button>
           <button role="tab" aria-selected="false" data-lang="python">Python</button>
           <button role="tab" aria-selected="false" data-lang="php">PHP</button>
           <button role="tab" aria-selected="false" data-lang="sheets">Sheets</button>
           <button role="tab" aria-selected="false" data-lang="json">Response</button>
+          <button class="copy" data-copy-from="code-ex">Copy</button>
         </div>
-        <div class="code-wrap"><button class="copy" data-copy-from="code-ex">Copy</button><pre><code id="code-ex"></code></pre></div>
+        <pre><code id="code-ex"></code></pre>
       </div>
     </div>
-
-    <div class="agent card">
-      <span class="ico ico-blue ico-lg" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M12 7V4M9 13h.01M15 13h.01"/></svg></span>
-      <div><h3>Built for AI agents</h3><p>Point any assistant at <a href="llms.txt">llms.txt</a> or load <a href="openapi.json">openapi.json</a> as a tool. Every response says its source, date and units, so agents don’t guess.</p></div>
+    <div class="agent panel">
+      <div><h3>For AI assistants</h3><p>Point an assistant at <a href="llms.txt">llms.txt</a> or load <a href="openapi.json">openapi.json</a> as a tool. Every response carries its BOT date and units.</p></div>
       <button class="btn btn-sm" data-copy-agent>Copy agent prompt</button>
     </div>
   </section>
 
-  <!-- Widget -->
   <section id="widget" class="section">
-    <div class="head"><div><p class="eyebrow">No code</p><h2>Website widget</h2><p class="sub">Choose currencies and your margin, then paste one line into any website. It refreshes by itself every day.</p></div></div>
+    <div class="head"><div><h2>Website widget</h2><p class="sub">Choose currencies and your margin, then paste one line into any website. It reads the latest BOT rates each time the page loads.</p></div></div>
     <div class="builder">
-      <form class="card builder-form" id="wform">
+      <form class="panel builder-form" id="wform">
         <fieldset><legend>Currencies</legend><div class="chips" id="wcur"></div></fieldset>
         <fieldset class="row2"><legend>Your margin on BOT rates</legend>
           <label>Buy below BOT by<span class="unit"><input type="number" id="wbuy" value="0" step="0.1" min="0" max="20" inputmode="decimal">%</span></label>
           <label>Sell above BOT by<span class="unit"><input type="number" id="wsell" value="0" step="0.1" min="0" max="20" inputmode="decimal">%</span></label>
         </fieldset>
         <fieldset class="row2"><legend>Look</legend>
-          <label>Title<input type="text" id="wtitle" value="Today's exchange rates" maxlength="60"></label>
-          <label>Style<select id="wtheme"><option value="soft">Soft light</option><option value="dark">Dark</option><option value="board">Rate board</option></select></label>
+          <label>Title<input type="text" id="wtitle" value="Exchange rates" maxlength="60"></label>
+          <label>Style<select id="wtheme"><option value="paper">Paper</option><option value="plain">Plain white</option><option value="dark">Dark</option></select></label>
         </fieldset>
       </form>
       <div class="builder-out">
         <div class="preview"><div id="wpreview"></div></div>
-        <div class="card code-card"><div class="code-wrap"><button class="copy" data-copy-from="wsnippet">Copy</button><pre><code id="wsnippet"></code></pre></div></div>
+        <div class="panel code-panel">
+          <div class="tabs"><span class="tab-label">Paste this where the rates should appear</span><button class="copy" data-copy-from="wsnippet">Copy</button></div>
+          <pre><code id="wsnippet"></code></pre>
+        </div>
       </div>
     </div>
-  </section>
-
-  <section class="cta card">
-    <h2>Free for Tanzanian builders.</h2>
-    <p>Use it in your app, your client’s site or your thesis. If it helps, star the repo and tell another developer.</p>
-    <div class="actions"><a class="btn btn-primary" href="https://github.com/africanuspanga/bot-rates" rel="noopener">Star on GitHub</a><a class="btn" href="#api">Read the API</a></div>
   </section>
 </main>
 
 <footer class="foot">
-  <p><b>Source:</b> <a href="https://www.bot.go.tz/ExchangeRate/excRates?lang=en" rel="noopener">Bank of Tanzania indicative exchange rates</a>. Exchange Rates is an independent project, not affiliated with or endorsed by the Bank of Tanzania.</p>
-  <p>Rates are reference rates for information. Banks and bureaus set their own prices. Check bot.go.tz before relying on a figure.</p>
+  <div class="foot-main">
+    <p class="foot-brand">Exchange Rates is a project by <a href="https://www.driftmark.co.tz/" rel="noopener">Driftmark Technologies</a></p>
+    <p>An independent mirror of the reference rates the Bank of Tanzania publishes at <a href="https://www.bot.go.tz/ExchangeRate/excRates?lang=en" rel="noopener">bot.go.tz</a>. It is not an official BOT service and is not affiliated with or endorsed by the Bank of Tanzania.</p>
+    <p>Rates are for information. Banks and bureaux set their own prices. Check bot.go.tz before relying on a figure for a transaction or filing.</p>
+  </div>
+  <nav class="foot-links" aria-label="Footer">
+    <a href="https://github.com/africanuspanga/bot-rates" rel="noopener">Source on GitHub</a>
+    <a href="api/latest.json">latest.json</a>
+    <a href="llms.txt">llms.txt</a>
+    <a href="openapi.json">openapi.json</a>
+    <a href="https://www.driftmark.co.tz/" rel="noopener">driftmark.co.tz</a>
+  </nav>
 </footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

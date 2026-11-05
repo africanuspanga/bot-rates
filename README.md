@@ -1,5 +1,7 @@
 # Exchange Rates: Bank of Tanzania daily exchange rates for developers
 
+A project by [Driftmark Technologies](https://www.driftmark.co.tz/). Independent, not an official Bank of Tanzania service.
+
 The Bank of Tanzania (BOT) publishes indicative exchange rates once per trading day on
 [bot.go.tz](https://www.bot.go.tz/ExchangeRate/excRates?lang=en) but offers no API.
 This repo reads that page every day with GitHub Actions and publishes the rates as free,
@@ -44,10 +46,10 @@ All rates are **TZS per 1 unit** of the foreign currency (gold per troy ounce).
 <script src="BASE/widget.js"
         data-currencies="USD,EUR,GBP,KES"
         data-buy-margin="1" data-sell-margin="1.5"
-        data-theme="soft"></script>
+        data-theme="paper"></script>
 ```
 Options: `data-currencies`, `data-buy-margin` / `data-sell-margin` (percent below/above BOT),
-`data-theme` (`soft`, `dark`, `board`), `data-title`, `data-target` (CSS selector to render into).
+`data-theme` (`paper`, `plain`, `dark`), `data-title`, `data-target` (CSS selector to render into).
 The site's **Widget** section builds this snippet with a live preview.
 
 ## How it works
@@ -77,6 +79,6 @@ stay in `data/`.
 
 ## Disclaimer
 
-Data © Bank of Tanzania, published for public information. This project is an independent
-mirror, not affiliated with or endorsed by BOT. Rates are indicative; bureaus and banks set their
+Data © Bank of Tanzania, published for public information. Exchange Rates is a project by
+Driftmark Technologies and an independent mirror, not affiliated with or endorsed by BOT. Rates are indicative; bureaus and banks set their
 own prices. Verify on bot.go.tz before relying on a figure.

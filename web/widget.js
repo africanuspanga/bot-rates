@@ -1,6 +1,6 @@
 /*! Exchange Rates widget: Bank of Tanzania daily rates for any website.
  * <script src=".../widget.js" data-currencies="USD,EUR,GBP" data-buy-margin="1" data-sell-margin="1"
- *         data-theme="soft|dark|board" data-title="Today's exchange rates" data-target="#rates"></script>
+ *         data-theme="paper|plain|dark" data-title="Exchange rates" data-target="#rates"></script>
  */
 (function () {
   "use strict";
@@ -8,10 +8,12 @@
   var BASE = script ? new URL(".", script.src).href : "";
 
   var THEMES = {
-    soft:  { bg: "#FFFFFF", card: "#F6F7FB", fg: "#111827", muted: "#8B91A3", line: "#EEF0F5", accent: "#4562F5", tint: "#E8ECFF", shadow: "0 1px 2px rgba(17,24,39,.05),0 18px 40px -20px rgba(54,81,240,.25)", radius: 24 },
-    dark:  { bg: "#141830", card: "#1B2040", fg: "#EEF0F8", muted: "#7D84A0", line: "#232946", accent: "#7F98FF", tint: "#232B5C", shadow: "0 18px 40px -20px rgba(0,0,0,.6)", radius: 24 },
-    board: { bg: "#0E3A33", card: "#134A41", fg: "#F0C96A", muted: "#9CC7B8", line: "rgba(255,255,255,.08)", accent: "#F0C96A", tint: "#134A41", shadow: "inset 0 0 0 5px #082A24", radius: 14 }
+    paper: { bg: "#F6F4EA", fg: "#2C3837", muted: "#626A66", line: "rgba(44,56,55,.1)", edge: "rgba(44,56,55,.12)", accent: "#B4471F", stamp: "#E0643B" },
+    plain: { bg: "#FFFFFF", fg: "#1F2726", muted: "#646B68", line: "rgba(0,0,0,.08)", edge: "rgba(0,0,0,.1)", accent: "#B4471F", stamp: "#E0643B" },
+    dark:  { bg: "#253030", fg: "#ECEADB", muted: "#959B94", line: "rgba(236,234,219,.09)", edge: "rgba(236,234,219,.12)", accent: "#F08A62", stamp: "#E8784F" }
   };
+  THEMES.soft = THEMES.paper; THEMES.light = THEMES.plain; THEMES.board = THEMES.dark;  // names used by earlier snippets
+  var MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
   function fmt(n) {
     if (n == null || isNaN(n)) return "–";
@@ -21,54 +23,53 @@
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
   }
-  function niceDate(iso) {
-    return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  function stampDate(iso) {
+    var d = new Date(iso + "T00:00:00");
+    return ("0" + d.getDate()).slice(-2) + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
   }
 
   function render(host, opts, data) {
-    var t = THEMES[opts.theme] || THEMES.soft;
+    var t = THEMES[opts.theme] || THEMES.paper;
     var root = host.shadowRoot || host.attachShadow({ mode: "open" });
     var buyM = Math.max(0, +opts.buyMargin || 0), sellM = Math.max(0, +opts.sellMargin || 0);
     var custom = buyM > 0 || sellM > 0;
     var wanted = (opts.currencies || "USD,EUR,GBP,KES").toUpperCase().split(/[\s,]+/).filter(Boolean);
     var byCode = {};
     data.rates.forEach(function (r) { byCode[r.code] = r; });
+    var mono = "ui-monospace,'SF Mono',Menlo,Consolas,monospace";
 
     var rows = wanted.filter(function (c) { return byCode[c]; }).map(function (c) {
       var r = byCode[c];
       var buy = r.buying != null ? r.buying * (1 - buyM / 100) : null;
       var sell = r.selling != null ? r.selling * (1 + sellM / 100) : null;
-      return '<tr><th scope="row"><span class="b">' + esc(c) + '</span><span><span class="c">' + esc(c) + '</span><span class="n">' + esc(r.name) +
-        "</span></span></th><td>" + fmt(buy) + "</td><td>" + fmt(sell) + "</td></tr>";
+      return '<tr><th scope="row"><span class="c">' + esc(c) + '</span><span class="n">' + esc(r.name) + "</span></th><td>" + fmt(buy) + "</td><td>" + fmt(sell) + "</td></tr>";
     }).join("");
 
     root.innerHTML =
       "<style>" +
-      ":host{display:block;max-width:460px;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif}" +
-      ".w{background:" + t.bg + ";color:" + t.fg + ";border-radius:" + t.radius + "px;padding:20px 20px 14px;box-shadow:" + t.shadow + "}" +
-      ".h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px}" +
-      ".t{font-weight:800;font-size:17px;letter-spacing:-.01em;margin:0}" +
-      ".d{font-size:12px;font-weight:700;color:" + t.accent + ";background:" + t.tint + ";padding:5px 9px;border-radius:9px;white-space:nowrap}" +
+      ":host{display:block;max-width:440px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}" +
+      ".w{background:" + t.bg + ";color:" + t.fg + ";border:1px solid " + t.edge + ";border-radius:16px;padding:20px 20px 16px}" +
+      ".h{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 12px}" +
+      ".t{margin:0;font-weight:600;font-size:16px}" +
+      ".d{padding:2px 8px;border:1.5px solid " + t.stamp + ";border-radius:6px;color:" + t.accent + ";font:500 11px/16px " + mono + ";letter-spacing:.04em;white-space:nowrap;transform:rotate(-2deg)}" +
       "table{width:100%;border-collapse:collapse}" +
-      "thead th{font-size:11.5px;font-weight:700;color:" + t.muted + ";text-align:right;padding:6px 0}" +
+      "thead th{height:28px;font:400 11px " + mono + ";color:" + t.muted + ";text-align:right}" +
       "thead th:first-child{text-align:left}" +
-      "tbody th{text-align:left;font-weight:400;padding:10px 0;border-top:1px solid " + t.line + "}" +
-      "tbody th{display:flex;align-items:center;gap:10px}" +
-      ".b{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:" + t.tint + ";color:" + t.accent + ";font-weight:800;font-size:10.5px;flex:none}" +
-      ".c{display:block;font-weight:800;font-size:15px}.n{display:block;font-size:12px;color:" + t.muted + "}" +
-      "td{text-align:right;padding:10px 0 10px 12px;border-top:1px solid " + t.line + ";font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}" +
-      ".f{margin:10px 0 0;font-size:11px;color:" + t.muted + "}.f a{color:inherit}" +
+      "tbody th{padding:10px 0;text-align:left;font-weight:400;border-top:1px solid " + t.line + "}" +
+      ".c{display:block;font:500 14px " + mono + "}.n{display:block;margin-top:2px;font-size:12px;color:" + t.muted + "}" +
+      "td{padding:10px 0 10px 12px;text-align:right;border-top:1px solid " + t.line + ";font:400 15px " + mono + ";font-variant-numeric:tabular-nums}" +
+      ".f{margin:12px 0 0;font-size:11px;line-height:16px;color:" + t.muted + "}.f a{color:inherit}" +
       "</style>" +
-      '<div class="w" part="widget"><div class="h"><p class="t">' + esc(opts.title || "Today's exchange rates") +
-      '</p><span class="d">' + niceDate(data.date) + "</span></div>" +
+      '<div class="w" part="widget"><div class="h"><p class="t">' + esc(opts.title || "Exchange rates") +
+      '</p><span class="d" title="Bank of Tanzania rate date">BOT · ' + stampDate(data.date) + "</span></div>" +
       "<table><thead><tr><th>TZS per 1</th><th>" + (custom ? "We buy" : "Buying") + "</th><th>" + (custom ? "We sell" : "Selling") +
-      "</th></tr></thead><tbody>" + (rows || '<tr><td colspan="3">No matching currencies.</td></tr>') + "</tbody></table>" +
-      '<p class="f">' + (custom ? "Based on " : "") + 'Bank of Tanzania reference rates · <a href="https://www.bot.go.tz/ExchangeRate/excRates?lang=en" target="_blank" rel="noopener">bot.go.tz</a></p></div>';
+      "</th></tr></thead><tbody>" + (rows || '<tr><td colspan="3">No matching currencies</td></tr>') + "</tbody></table>" +
+      '<p class="f">' + (custom ? "Our prices, based on " : "") + 'Bank of Tanzania reference rates published at <a href="https://www.bot.go.tz/ExchangeRate/excRates?lang=en" target="_blank" rel="noopener">bot.go.tz</a></p></div>';
   }
 
   function renderError(host) {
     var root = host.shadowRoot || host.attachShadow({ mode: "open" });
-    root.innerHTML = '<p style="font:14px system-ui;color:#8B91A3">Exchange rates are unavailable right now. Please check again later.</p>';
+    root.innerHTML = '<p style="font:14px system-ui;color:#626A66">Exchange rates are unavailable right now. Check again later</p>';
   }
 
   var cache = null;
@@ -86,7 +87,7 @@
     var ds = script.dataset;
     var host = ds.target ? document.querySelector(ds.target) : null;
     if (!host) { host = document.createElement("div"); script.parentNode.insertBefore(host, script.nextSibling); }
-    var opts = { currencies: ds.currencies, buyMargin: ds.buyMargin, sellMargin: ds.sellMargin, theme: ds.theme || "soft", title: ds.title };
+    var opts = { currencies: ds.currencies, buyMargin: ds.buyMargin, sellMargin: ds.sellMargin, theme: ds.theme || "paper", title: ds.title };
     load().then(function (data) { render(host, opts, data); }, function () { renderError(host); });
   }
 })();

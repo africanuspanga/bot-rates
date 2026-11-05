@@ -188,6 +188,9 @@ def cmd_daily(_args):
     merged = {**recent, **today_rates}  # today's page wins for its date
     changed = save(merged)
     latest = max(merged)
+    meta = DATA_DIR.parent / "meta.json"
+    meta.write_text(json.dumps({"last_checked": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                "latest_bot_date": latest, "source": TODAY_URL}, indent=1) + "\n")
     print(f"Latest BOT trade date: {latest} ({len(merged[latest])} currencies, "
           f"USD mean {merged[latest]['USD'][2]}). Updated dates: {changed or 'none'}")
 

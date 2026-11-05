@@ -14,6 +14,8 @@ import os
 import shutil
 from pathlib import Path
 
+from receipt_svg import render as render_receipt
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "history"
 WEB = ROOT / "web"
@@ -177,8 +179,12 @@ def main():
     latest_day = days[-1]
     prev_day = days[-2]
     latest = all_days[latest_day]
+    meta_path = ROOT / "data" / "meta.json"
+    checked = json.loads(meta_path.read_text()).get("last_checked") if meta_path.exists() else None
     write_json(API / "latest.json", {
         "source": SOURCE,
+        "source_url": "https://www.bot.go.tz/ExchangeRate/excRates",
+        "fetched_at": checked,
         "note": "TZS per 1 unit of foreign currency. Indicative rates; bureaus set their own prices.",
         "base": "TZS",
         "date": latest_day,
@@ -187,6 +193,8 @@ def main():
                    "change": round(r[2] - all_days[prev_day][c][2], 4) if c in all_days[prev_day] else None}
                   for c, r in sorted(latest.items())],
     })
+    latest_rates = [rate_obj(c, r) for c, r in latest.items()]
+    (OUT / "receipt.svg").write_text(render_receipt(latest_day, latest_rates, checked))
     write_csv(API / "latest.csv", [[latest_day, c, NAMES.get(c, c), *r] for c, r in sorted(latest.items())])
 
     series = {}

@@ -1,13 +1,11 @@
 (function () {
   "use strict";
   var BASE = new URL(".", location.href.split("#")[0]).href;
-  var FEATURED = ["USD", "EUR", "GBP", "KES"];
+  var STATS = ["USD", "EUR", "GBP", "KES"];
   var POPULAR = ["USD", "EUR", "GBP", "KES", "UGX", "RWF", "ZAR", "AED", "CNY", "INR", "JPY", "CHF", "SAR", "BIF", "ZMW", "MWK"];
-  var showAll = false;
-  var WIDGET_DEFAULT = ["USD", "EUR", "GBP", "KES"];
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var $ = function (id) { return document.getElementById(id); };
-  var latest, byCode = {}, selected = "USD", rangeDays = 365, gaugeYear = null;
+  var latest, byCode = {}, selected = "USD", rangeDays = 0, year = null, showAll = false, allYears = false;
   var cache = {};
 
   /* ---------- helpers ---------- */
@@ -15,6 +13,7 @@
     if (!cache[path]) cache[path] = fetch(BASE + path).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
     return cache[path];
   }
+  function series(code) { return getJSON("api/currency/" + code + ".json").then(function (s) { return s.rates; }); }
   function fmt(n, dp) {
     if (n == null || isNaN(n)) return "–";
     var d = dp != null ? dp : n >= 100 ? 2 : n >= 1 ? 3 : 4;
@@ -23,90 +22,50 @@
   function short(n) { return n >= 1000 ? fmt(n, 0) : fmt(n); }
   function pct(a, b) { return (b - a) / a * 100; }
   function signed(p, dp) { return (p > 0 ? "+" : p < 0 ? "−" : "") + Math.abs(p).toFixed(dp == null ? 2 : dp) + "%"; }
-  function niceDate(iso, long) {
-    return new Date(iso + "T00:00:00").toLocaleDateString("en-GB",
-      long ? { weekday: "short", day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short", year: "numeric" });
+  function day(iso, withYear) {
+    var d = new Date(iso + "T00:00:00");
+    return d.getDate() + " " + MONTHS[d.getMonth()] + (withYear === false ? "" : " " + d.getFullYear());
   }
+  function stampDate(iso) { var d = new Date(iso + "T00:00:00"); return ("0" + d.getDate()).slice(-2) + " " + MONTHS[d.getMonth()].toUpperCase() + " " + d.getFullYear(); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
+  function cls(p) { return p > 0 ? "up" : p < 0 ? "down" : ""; }
   function toast(msg) {
     var t = $("toast"); t.textContent = msg; t.classList.add("show");
-    clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove("show"); }, 1700);
+    clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove("show"); }, 1600);
   }
   function copy(text, what) {
-    navigator.clipboard.writeText(text).then(function () { toast(what + " copied"); }, function () { toast("Copy failed. Select the text and copy it."); });
+    navigator.clipboard.writeText(text).then(function () { toast(what + " copied"); }, function () { toast("Copy failed. Select the text and copy it"); });
   }
-  function series(code) { return getJSON("api/currency/" + code + ".json").then(function (s) { return s.rates; }); }
-  function groupAvg(rows, keyFn) {
-    var g = {}, order = [];
-    rows.forEach(function (r) { var k = keyFn(r[0]); if (!g[k]) { g[k] = []; order.push(k); } g[k].push(r[3]); });
-    return order.map(function (k) { var v = g[k]; return { key: k, avg: v.reduce(function (a, b) { return a + b; }, 0) / v.length }; });
-  }
-
-  /* ---------- glossy bars (signature) ---------- */
-  function drawBars(el, items, sel, labelFn, onPick) {
-    var vals = items.map(function (i) { return i.avg; });
-    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), span = hi - lo || 1;
-    var h = function (v) { return 28 + 72 * (v - lo) / span; };
-    el.innerHTML = items.map(function (it, i) {
-      var cls = i === sel ? " on" : Math.abs(i - sel) === 1 ? " near" : "";
-      return '<button class="bar' + cls + '" style="--h:' + h(it.avg).toFixed(1) + '%" data-i="' + i + '" aria-label="' + esc(labelFn(it, true)) + ": " + fmt(it.avg) +
-        '" aria-pressed="' + (i === sel) + '"><span class="knob"></span><span class="bar-l">' + esc(labelFn(it)) + "</span></button>";
-    }).join("") + '<div class="guide" aria-hidden="true"><span class="guide-l"></span></div>';
-    function place(i) {
-      var bar = el.children[i], guide = el.querySelector(".guide");
-      var top = bar.offsetTop + (el.classList.contains("bars-tall") ? 15 : 33);
-      guide.style.top = top + "px";
-      guide.querySelector(".guide-l").textContent = short(items[i].avg);
-      var left = bar.offsetLeft + bar.offsetWidth / 2 < el.clientWidth / 2;
-      guide.querySelector(".guide-l").style.cssText = left ? "left:auto;right:10px" : "";
-    }
-    el.onclick = function (e) {
-      var b = e.target.closest(".bar"); if (!b) return;
-      var i = +b.dataset.i;
-      [].forEach.call(el.querySelectorAll(".bar"), function (x, j) {
-        x.classList.toggle("on", j === i); x.classList.toggle("near", Math.abs(j - i) === 1); x.setAttribute("aria-pressed", j === i);
-      });
-      setTimeout(function () { place(i); }, 0);
-      if (onPick) onPick(items[i]);
-    };
-    requestAnimationFrame(function () { place(sel); });
-    setTimeout(function () { place(sel); }, 650);
-  }
+  function dayChange(r) { return r.change != null && r.mean ? r.change / (r.mean - r.change) * 100 : null; }
 
   /* ---------- hero ---------- */
-  function renderHero() {
-    var u = byCode.USD;
-    $("hero-updated").textContent = "BOT rates for " + niceDate(latest.date, true) + " · updated daily";
-    $("h-buy").textContent = fmt(u.buying);
-    $("h-sell").textContent = fmt(u.selling);
-    var p = u.change != null ? u.change / (u.mean - u.change) * 100 : 0;
-    $("h-chg").innerHTML = '<span class="' + (p > 0 ? "up" : p < 0 ? "down" : "flat") + '">' + signed(p) + "</span>";
-    series("USD").then(function (rows) {
-      $("days-count").textContent = rows.length.toLocaleString("en-US");
-      var months = groupAvg(rows, function (d) { return d.slice(0, 7); }).slice(-7);
-      $("bars-note").textContent = "Tap a month";
-      drawBars($("hero-bars"), months, months.length - 2 >= 0 ? months.length - 2 : 0, function (it, long) {
-        var m = MONTHS[+it.key.slice(5) - 1]; return long ? m + " " + it.key.slice(0, 4) : m;
-      });
-    });
+  function renderStatus() {
+    $("status-stamp").textContent = "BOT · " + stampDate(latest.date);
+    var nowEAT = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+    var ageDays = (new Date(nowEAT) - new Date(latest.date)) / 864e5;
+    var fetched = "";
+    if (latest.fetched_at) {
+      var f = new Date(new Date(latest.fetched_at).getTime() + 3 * 3600e3);
+      fetched = " at " + ("0" + f.getUTCHours()).slice(-2) + ":" + ("0" + f.getUTCMinutes()).slice(-2) + " EAT on " + f.getUTCDate() + " " + MONTHS[f.getUTCMonth()];
+    }
+    $("status-text").textContent = ageDays > 2
+      ? "Latest rate available. BOT has not published a newer one yet, or our fetch is late"
+      : "Latest BOT rate, fetched from bot.go.tz" + fetched;
+  }
+  function inlineReceipt() {
+    // Inline the SVG so it uses the page's mono font instead of a system fallback
+    fetch(BASE + "receipt.svg").then(function (r) { return r.ok ? r.text() : null; }).then(function (svg) {
+      if (svg && svg.indexOf("<svg") === 0) $("receipt").innerHTML = svg;
+    }, function () {});
   }
 
   /* ---------- rates ---------- */
-  function sparkPath(vals, w, h) {
-    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), s = hi - lo || 1;
-    return vals.map(function (v, i) { return (i ? "L" : "M") + (i / (vals.length - 1) * w).toFixed(1) + " " + (h - 3 - (v - lo) / s * (h - 6)).toFixed(1); }).join("");
-  }
-  function renderFeatured() {
-    $("featured").innerHTML = FEATURED.filter(function (c) { return byCode[c]; }).map(function (c) {
-      var r = byCode[c], p = r.change != null ? r.change / (r.mean - r.change) * 100 : 0;
-      return '<button class="feat card" data-pick="' + c + '"><span class="code">' + c + ' <span class="flag ' + (p > 0 ? "up" : p < 0 ? "down" : "flat") + '">' + signed(p) +
-        "</span></span><b>" + fmt(r.mean) + "</b><small>" + esc(r.name) + ' · mean</small><svg class="spark" viewBox="0 0 200 36" preserveAspectRatio="none" id="sp-' + c + '"></svg></button>';
+  function renderStats() {
+    $("stats").innerHTML = STATS.filter(function (c) { return byCode[c]; }).map(function (c) {
+      var r = byCode[c], p = dayChange(r);
+      return '<button class="panel stat" data-pick="' + c + '"><span class="label"><span>' + esc(r.name) + "</span><span>" + c + '</span></span><p class="figure">' + fmt(r.mean) +
+        '</p><p class="meta"><span class="' + cls(p) + '">' + (p == null ? "–" : signed(p)) + "</span> vs " + day(latest.previous_date, false) + "</p></button>";
     }).join("");
-    FEATURED.forEach(function (c) {
-      series(c).then(function (rows) {
-        var el = $("sp-" + c); if (el) el.innerHTML = '<path d="' + sparkPath(rows.slice(-60).map(function (r) { return r[3]; }), 200, 36) + '"/>';
-      });
-    });
   }
   function renderTable() {
     var q = $("search").value.trim().toLowerCase();
@@ -117,203 +76,195 @@
     $("more").hidden = !!q || all.length <= 10;
     $("more").textContent = showAll ? "Show fewer" : "Show all " + all.length + " currencies";
     $("rates-body").innerHTML = rows.length ? rows.map(function (r) {
-      var p = r.change != null && r.mean ? r.change / (r.mean - r.change) * 100 : null;
-      var cls = p > 0 ? "up" : p < 0 ? "down" : "flat";
-      return '<tr tabindex="0" data-code="' + r.code + '" aria-selected="' + (r.code === selected) + '"><td><span class="cur"><span class="badge">' + r.code +
-        "</span><span><b>" + esc(r.name) + "</b><small>" + r.code + '</small></span></span></td><td class="n">' + fmt(r.buying) + '</td><td class="n">' + fmt(r.selling) +
-        '</td><td class="n hide-sm">' + fmt(r.mean) + '</td><td class="n"><span class="chg ' + cls + '">' + (p == null ? "–" : p === 0 ? "0.00%" : signed(p)) + "</span></td></tr>";
-    }).join("") : '<tr><td colspan="5" class="empty">No currency matches “' + esc(q) + "”. Try a code like USD or a name like euro.</td></tr>";
+      var p = dayChange(r);
+      return '<tr tabindex="0" data-code="' + r.code + '" aria-selected="' + (r.code === selected) + '"><td><span class="code">' + r.code + '</span><span class="name">' + esc(r.name) +
+        '</span></td><td class="n">' + fmt(r.buying) + '</td><td class="n">' + fmt(r.selling) + '</td><td class="n hide-sm">' + fmt(r.mean) +
+        '</td><td class="n ' + cls(p) + '">' + (p == null ? "–" : signed(p)) + "</td></tr>";
+    }).join("") : '<tr><td colspan="5" class="empty">No currency matches “' + esc(q) + "”. Try a code like USD or a name like euro</td></tr>";
   }
 
-  /* ---------- insights ---------- */
+  /* ---------- history ---------- */
   function pick(code, scroll) {
     if (!byCode[code]) return;
-    selected = code; gaugeYear = null;
-    $("ins-cur").value = code;
+    selected = code; year = null;
+    $("cur").value = code;
     [].forEach.call(document.querySelectorAll("#rates-body tr[data-code]"), function (tr) { tr.setAttribute("aria-selected", tr.dataset.code === code); });
-    renderInsights();
-    if (scroll) $("insights").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    renderHistory();
+    if (scroll) $("history").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
-  function renderInsights() {
+  function renderHistory() {
     var code = selected;
-    $("ins-title").textContent = "The shilling against the " + byCode[code].name;
+    $("hist-title").textContent = byCode[code].name + " since 1999";
+    $("y-code").textContent = code;
     series(code).then(function (rows) {
       if (code !== selected) return;
+      $("hist-title").textContent = byCode[code].name + " since " + rows[0][0].slice(0, 4);
       drawChart(rangeDays ? rows.slice(-rangeDays) : rows);
-      var years = groupAvg(rows, function (d) { return d.slice(0, 4); });
-      var yi = gaugeYear ? years.findIndex(function (y) { return y.key === gaugeYear; }) : years.length - 1;
-      drawBars($("year-bars"), years, yi, function (it, long) { return long ? it.key : (years.length > 14 ? "’" + it.key.slice(2) : it.key); }, function (it) {
-        gaugeYear = it.key; drawGauge(rows, it.key);
-      });
-      drawGauge(rows, years[yi].key);
+      renderYears(rows);
       renderRecords(rows);
+      renderDays(rows);
       updateLookup();
-    }, function () { $("chart").innerHTML = '<p class="sub">History could not load. Check your connection and reload.</p>'; });
+    }, function () { $("chart").innerHTML = '<p class="sub">History could not load. Check your connection and reload the page</p>'; });
   }
 
   function drawChart(rows) {
-    var step = Math.max(1, Math.floor(rows.length / 600));
+    var step = Math.max(1, Math.floor(rows.length / 700));
     var pts = rows.filter(function (_, i) { return i % step === 0 || i === rows.length - 1; });
-    var el = $("chart"), W = el.clientWidth || 700, H = el.clientHeight || 300, padL = 8, padR = 58, padB = 26, padT = 10;
+    var el = $("chart"), W = el.clientWidth || 800, H = el.clientHeight || 340, padL = 4, padR = 64, padT = 20, padB = 24;
     var vals = pts.map(function (p) { return p[3]; });
-    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), pad = (hi - lo) * .12 || hi * .01;
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), pad = (hi - lo) * .1 || hi * .01;
     lo -= pad; hi += pad;
     var x = function (i) { return padL + i / Math.max(1, pts.length - 1) * (W - padL - padR); };
     var y = function (v) { return padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB); };
     var line = pts.map(function (p, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p[3]).toFixed(1); }).join("");
     var area = line + "L" + x(pts.length - 1).toFixed(1) + " " + (H - padB) + "L" + padL + " " + (H - padB) + "Z";
     var grid = "";
-    for (var k = 0; k <= 3; k++) {
-      var v = lo + (hi - lo) * (k + .5) / 4, yy = y(v);
-      grid += '<line class="grid" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '"/><text class="axis" x="' + (W - padR + 8) + '" y="' + (yy + 4) + '">' + short(v) + "</text>";
+    for (var k = 0; k < 4; k++) {
+      var v = lo + (hi - lo) * (k + .5) / 4, yy = y(v).toFixed(1);
+      grid += '<line class="grid" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '"/><text class="axis" x="' + (W - padR + 12) + '" y="' + (+yy + 4) + '">' + short(v) + "</text>";
     }
-    var n = Math.min(W < 520 ? 3 : 5, pts.length), xl = "";
+    var n = Math.min(W < 520 ? 3 : 6, pts.length), xl = "";
     for (var j = 0; j < n; j++) {
       var idx = Math.round(j * (pts.length - 1) / Math.max(1, n - 1)), d = pts[idx][0];
-      var lab = rangeDays && rangeDays <= 365 ? MONTHS[+d.slice(5, 7) - 1] + " " + d.slice(2, 4) : d.slice(0, 4);
-      xl += '<text class="axis" x="' + x(idx) + '" y="' + (H - 4) + '" text-anchor="' + (j === 0 ? "start" : j === n - 1 ? "end" : "middle") + '">' + lab + "</text>";
+      var lab = rangeDays && rangeDays <= 365 ? MONTHS[+d.slice(5, 7) - 1] + " " + d.slice(0, 4) : d.slice(0, 4);
+      xl += '<text class="axis" x="' + x(idx).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="' + (j === 0 ? "start" : j === n - 1 ? "end" : "middle") + '">' + lab + "</text>";
     }
-    el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4562F5" stop-opacity=".28"/><stop offset="1" stop-color="#4562F5" stop-opacity="0"/></linearGradient></defs>' +
-      grid + '<path d="' + area + '" fill="url(#ag)" stroke="none"/><path class="line" d="' + line + '"/>' + xl +
-      '<line class="cursor" id="cur" y1="' + padT + '" y2="' + (H - padB) + '" visibility="hidden"/><circle class="knob" id="kn" r="7" visibility="hidden"/></svg>';
+    // Label the highest and lowest points of the period: real data, no commentary
+    var hiI = 0, loI = 0;
+    pts.forEach(function (p, i) { if (p[3] > pts[hiI][3]) hiI = i; if (p[3] < pts[loI][3]) loI = i; });
+    function mark(i, below) {
+      var mx = x(i), my = y(pts[i][3]), anchor = mx > W * .7 ? "end" : mx < W * .15 ? "start" : "middle";
+      return '<circle class="mark-dot" cx="' + mx.toFixed(1) + '" cy="' + my.toFixed(1) + '" r="3"/><text class="mark-label" x="' + mx.toFixed(1) + '" y="' + (my + (below ? 18 : -10)).toFixed(1) +
+        '" text-anchor="' + anchor + '">' + short(pts[i][3]) + " · " + day(pts[i][0]) + "</text>";
+    }
+    el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '">' + grid + '<path class="area" d="' + area + '"/><path class="line" d="' + line + '"/>' + xl +
+      mark(hiI, false) + (loI !== hiI ? mark(loI, true) : "") +
+      '<line class="cursor" id="cur-l" y1="' + padT + '" y2="' + (H - padB) + '" visibility="hidden"/><circle class="dot" id="cur-d" r="5" visibility="hidden"/></svg>';
 
     var first = rows[0], last = rows[rows.length - 1], p = pct(first[3], last[3]);
-    $("ins-now").textContent = fmt(last[3]) + " TZS";
-    $("ins-delta").innerHTML = '<span class="' + (p > 0 ? "up" : p < 0 ? "down" : "flat") + '">' + signed(p, 1) + "</span> since " + niceDate(first[0]);
+    $("chart-label").textContent = "Mean rate on " + day(last[0]) + ", TZS per 1 " + selected;
+    $("chart-now").textContent = fmt(last[3]);
+    $("chart-delta").innerHTML = '<span class="' + cls(p) + '">' + signed(p, 1) + "</span> vs " + day(first[0]) + " (" + fmt(first[3]) + ")";
 
     var svg = el.querySelector("svg"), tip = $("tip");
     svg.addEventListener("pointermove", function (e) {
       var rect = svg.getBoundingClientRect(), px = (e.clientX - rect.left) * W / rect.width;
       var i = Math.max(0, Math.min(pts.length - 1, Math.round((px - padL) / (W - padL - padR) * (pts.length - 1))));
-      var pt = pts[i], cx = x(i), cy = y(pt[3]);
-      ["cur", "kn"].forEach(function (id) { svg.getElementById(id).setAttribute("visibility", "visible"); });
-      svg.getElementById("cur").setAttribute("x1", cx); svg.getElementById("cur").setAttribute("x2", cx);
-      svg.getElementById("kn").setAttribute("cx", cx); svg.getElementById("kn").setAttribute("cy", cy);
+      var pt = pts[i], cx = x(i), cy = y(pt[3]), cl = svg.getElementById("cur-l"), cd = svg.getElementById("cur-d");
+      cl.setAttribute("x1", cx); cl.setAttribute("x2", cx); cl.setAttribute("visibility", "visible");
+      cd.setAttribute("cx", cx); cd.setAttribute("cy", cy); cd.setAttribute("visibility", "visible");
       tip.hidden = false;
       tip.style.left = (el.offsetLeft + cx * rect.width / W) + "px";
       tip.style.top = (el.offsetTop + cy * rect.height / H) + "px";
-      tip.innerHTML = niceDate(pt[0]) + "<br><b>" + fmt(pt[3]) + "</b> mean<br>Buy " + fmt(pt[1]) + " · Sell " + fmt(pt[2]);
+      tip.innerHTML = day(pt[0]) + "<br>Mean " + fmt(pt[3]) + "<br>Buy " + fmt(pt[1]) + " · Sell " + fmt(pt[2]);
     });
     svg.addEventListener("pointerleave", function () {
-      tip.hidden = true; ["cur", "kn"].forEach(function (id) { svg.getElementById(id).setAttribute("visibility", "hidden"); });
+      tip.hidden = true;
+      svg.getElementById("cur-l").setAttribute("visibility", "hidden"); svg.getElementById("cur-d").setAttribute("visibility", "hidden");
     });
   }
 
-  function arc(cx, cy, r, a0, a1) {
-    var p = function (a) { return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }, s = p(a0), e = p(a1);
-    return "M" + s[0].toFixed(2) + " " + s[1].toFixed(2) + "A" + r + " " + r + " 0 " + (a1 - a0 > Math.PI ? 1 : 0) + " 1 " + e[0].toFixed(2) + " " + e[1].toFixed(2);
+  function yearly(rows) {
+    var g = {}, order = [];
+    rows.forEach(function (r) { var k = r[0].slice(0, 4); if (!g[k]) { g[k] = []; order.push(k); } g[k].push(r[3]); });
+    return order.map(function (k) { return { year: k, avg: g[k].reduce(function (a, b) { return a + b; }, 0) / g[k].length }; });
   }
-  function drawGauge(rows, year) {
+  function renderYears(rows) {
+    var ys = yearly(rows).reverse(), max = Math.max.apply(null, ys.map(function (y) { return y.avg; }));
+    if (!year) year = ys[0].year;
+    var shown = allYears ? ys : ys.slice(0, 12);
+    $("years").innerHTML = shown.map(function (y) {
+      return '<li><button data-year="' + y.year + '" aria-pressed="' + (y.year === year) + '"><span>' + y.year + '</span><span class="bar"><i style="width:' + (y.avg / max * 100).toFixed(1) +
+        '%"></i></span><span class="v">' + fmt(y.avg) + "</span></button></li>";
+    }).join("") + (ys.length > 12 ? '<li><button class="more" data-all-years>' + (allYears ? "Show fewer years" : "Show all " + ys.length + " years") + "</button></li>" : "");
+  }
+  function renderRecords(rows) {
+    var hi = rows[0], lo = rows[0], up = null, down = null;
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i], p = pct(rows[i - 1][3], r[3]);
+      if (r[3] > hi[3]) hi = r;
+      if (r[3] < lo[3]) lo = r;
+      if (!up || p > up[1]) up = [r[0], p];
+      if (!down || p < down[1]) down = [r[0], p];
+    }
+    var first = rows[0], last = rows[rows.length - 1];
+    $("rec-range").textContent = day(first[0]) + " to " + day(last[0]);
+    function row(t, v, s, c) { return "<div><dt>" + t + '</dt><dd class="' + (c || "") + '">' + v + "<small>" + s + "</small></dd></div>"; }
+    $("records").innerHTML =
+      row("Highest mean", fmt(hi[3]), day(hi[0])) +
+      row("Lowest mean", fmt(lo[3]), day(lo[0])) +
+      row("Largest one-day rise", signed(up[1]), day(up[0]), "up") +
+      row("Largest one-day fall", signed(down[1]), day(down[0]), "down") +
+      row("Change since " + first[0].slice(0, 4), signed(pct(first[3], last[3]), 0), fmt(first[3]) + " to " + fmt(last[3]), cls(last[3] - first[3]));
+  }
+  function renderDays(rows) {
     var yr = rows.filter(function (r) { return r[0].slice(0, 4) === year; });
     var up = 0, down = 0, flat = 0;
     for (var i = 1; i < yr.length; i++) { var d = yr[i][3] - yr[i - 1][3]; if (d > 0) up++; else if (d < 0) down++; else flat++; }
-    var total = Math.max(1, up + down + flat), change = pct(yr[0][3], yr[yr.length - 1][3]);
-    $("g-code").textContent = selected; $("g-year").textContent = year;
-    var segs = [[up, "#F4A54B"], [down, "#4F6CF7"], [flat, "#E585D6"]];
-    var C = 150, R = 118, gap = .16, a = -Math.PI / 2 + gap / 2, paths = "";
-    segs.forEach(function (s) {
-      var span = s[0] / total * (Math.PI * 2);
-      if (span > gap) paths += '<path d="' + arc(C, C, R, a, a + span - gap) + '" stroke="' + s[1] + '" stroke-width="26" stroke-linecap="round"/>';
-      a += span;
-    });
-    var ticks = "";
-    for (var t = 0; t < 60; t++) {
-      var ang = t / 60 * Math.PI * 2 - Math.PI / 2, major = t % 15 === 0, r1 = major ? 80 : 84, r2 = 92;
-      ticks += '<line class="' + (major ? "major" : "") + '" x1="' + (C + r1 * Math.cos(ang)).toFixed(1) + '" y1="' + (C + r1 * Math.sin(ang)).toFixed(1) +
-        '" x2="' + (C + r2 * Math.cos(ang)).toFixed(1) + '" y2="' + (C + r2 * Math.sin(ang)).toFixed(1) + '"/>';
-    }
-    var word = change > 0 ? "TZS weaker" : change < 0 ? "TZS stronger" : "No change";
-    $("gauge").innerHTML = '<svg viewBox="0 0 300 300" role="img" aria-label="' + word + " " + signed(change, 1) + " against " + selected + " in " + year + '">' +
-      '<circle cx="150" cy="150" r="118" stroke="var(--soft)" stroke-width="34"/>' + paths + '<g class="ticks">' + ticks + "</g>" +
-      '<text x="150" y="132" text-anchor="middle" font-size="15" font-weight="600" fill="var(--muted)" style="fill:var(--muted)">' + word + "</text>" +
-      '<text x="150" y="176" text-anchor="middle" font-size="40" font-weight="800" letter-spacing="-1">' + signed(change, 1) + "</text>" +
-      '<text x="150" y="200" text-anchor="middle" font-size="12.5" font-weight="600" style="fill:var(--muted)">' + niceDate(yr[0][0]).replace(/ \d{4}$/, "") + " → " + niceDate(yr[yr.length - 1][0]).replace(/ \d{4}$/, "") + "</text></svg>";
-    function ring(n, color) {
-      var f = n / total, end = -Math.PI / 2 + Math.max(.02, f) * Math.PI * 2 * .999;
-      return '<svg class="ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" stroke="var(--soft)" stroke-width="7"/><path d="' + arc(30, 30, 24, -Math.PI / 2, end) +
-        '" stroke="' + color + '" stroke-width="7" stroke-linecap="round"/></svg>';
-    }
-    $("gauge-legend").innerHTML =
-      "<div>" + ring(up, "#F4A54B") + "<span>Days weaker</span><b>" + up + "</b></div>" +
-      "<div>" + ring(down, "#4F6CF7") + "<span>Days stronger</span><b>" + down + "</b></div>" +
-      "<div>" + ring(flat, "#E585D6") + "<span>No change</span><b>" + flat + "</b></div>";
-  }
-
-  function renderRecords(rows) {
-    var hi = rows[0], lo = rows[0], jump = null, drop = null;
-    for (var i = 1; i < rows.length; i++) {
-      var r = rows[i];
-      if (r[3] > hi[3]) hi = r;
-      if (r[3] < lo[3]) lo = r;
-      var p = pct(rows[i - 1][3], r[3]);
-      if (!jump || p > jump[1]) jump = [r[0], p];
-      if (!drop || p < drop[1]) drop = [r[0], p];
-    }
-    var first = rows[0], last = rows[rows.length - 1];
-    $("records").innerHTML =
-      "<li><span>Highest " + selected + " rate</span><b>" + fmt(hi[3]) + "<small>" + niceDate(hi[0]) + "</small></b></li>" +
-      "<li><span>Lowest " + selected + " rate</span><b>" + fmt(lo[3]) + "<small>" + niceDate(lo[0]) + "</small></b></li>" +
-      '<li><span>Biggest one-day rise</span><b class="up">' + signed(jump[1]) + "<small>" + niceDate(jump[0]) + "</small></b></li>" +
-      '<li><span>Since records began</span><b class="' + (last[3] > first[3] ? "up" : "down") + '">' + signed(pct(first[3], last[3]), 0) + "<small>from " + fmt(first[3]) + " in " + first[0].slice(0, 4) + "</small></b></li>";
+    var total = Math.max(1, up + down + flat), ch = yr.length ? pct(yr[0][3], yr[yr.length - 1][3]) : 0;
+    $("days-title").textContent = "Daily moves in " + year;
+    $("days-bar").innerHTML =
+      '<span style="flex:' + up + ';background:var(--accent)" title="Rate rose"></span>' +
+      '<span style="flex:' + down + ';background:var(--muted)" title="Rate fell"></span>' +
+      '<span style="flex:' + flat + ';background:var(--line-strong)" title="No change"></span>';
+    $("days-legend").innerHTML = '<span class="up">' + up + " up</span> · " + down + " down · " + flat + " unchanged · " + selected + " " +
+      '<span class="' + cls(ch) + '">' + signed(ch, 1) + "</span> over " + year + " (" + Math.round(up / total * 100) + "% of days the shilling weakened)";
   }
 
   function updateLookup() {
     var v = $("lookup-date").value, out = $("lookup-out");
     if (!v) return;
-    out.textContent = "Loading…";
+    out.textContent = "Loading";
     getJSON("api/history/" + v.slice(0, 4) + ".json").then(function (h) {
       var days = Object.keys(h.rates).filter(function (d) { return d <= v; }).sort();
       var d = days[days.length - 1], r = d && h.rates[d][selected];
-      out.innerHTML = r ? "<b>" + selected + " on " + niceDate(d) + "</b>: buy " + fmt(r[0]) + " · sell " + fmt(r[1]) + " · mean " + fmt(r[2]) + (d !== v ? " (closest earlier BOT date)" : "")
-        : "BOT has no " + selected + " rate on or just before " + niceDate(v) + ".";
-    }, function () { out.textContent = "No BOT data for that year. Pick a date from 24 June 1999 to today."; });
+      out.textContent = r ? selected + " on " + day(d) + ": buy " + fmt(r[0]) + " · sell " + fmt(r[1]) + " · mean " + fmt(r[2]) + (d !== v ? " (closest earlier BOT date)" : "")
+        : "BOT has no " + selected + " rate on or just before " + day(v);
+    }, function () { out.textContent = "No BOT data for that year. Pick a date from 24 June 1999"; });
   }
 
   /* ---------- API ---------- */
-  function endpoints() {
+  function renderEndpoints() {
     var y = new Date().getFullYear();
-    return [
-      ["Today’s rates, all currencies", "api/latest.json"],
-      ["Today’s rates as CSV", "api/latest.csv"],
+    $("endpoints").innerHTML = [
+      ["Latest rates, all currencies", "api/latest.json"],
+      ["Latest rates as CSV", "api/latest.csv"],
       ["One currency, every day since 1999", "api/currency/USD.json"],
       ["One year, all currencies", "api/history/" + y + ".json"],
       ["Currency list and coverage", "api/currencies.json"],
-      ["OpenAPI spec for tools and agents", "openapi.json"],
-      ["Plain-text guide for LLMs", "llms.txt"]
-    ];
-  }
-  function renderEndpoints() {
-    $("endpoints").innerHTML = endpoints().map(function (e) {
+      ["OpenAPI spec", "openapi.json"],
+      ["Guide for AI assistants", "llms.txt"]
+    ].map(function (e) {
       var url = BASE + e[1];
-      return '<li class="endpoint"><span class="what">' + e[0] + '</span><code><span class="get">GET</span>/' + esc(e[1]) +
-        '</code><span class="btns"><button class="copy" data-copy="' + esc(url) + '">Copy</button><a class="open" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a></span></li>';
+      return '<li class="endpoint"><span class="what">' + e[0] + "</span><code>GET /" + esc(e[1]) + '</code><span class="btns"><button class="copy" data-copy="' + esc(url) +
+        '">Copy</button><a class="open" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a></span></li>';
     }).join("");
   }
   function examples() {
     var u = BASE + "api/latest.json";
-    var sample = latest ? JSON.stringify({ base: "TZS", date: latest.date, previous_date: latest.previous_date,
+    var sample = latest ? JSON.stringify({ base: "TZS", date: latest.date, previous_date: latest.previous_date, fetched_at: latest.fetched_at,
       rates: latest.rates.filter(function (r) { return r.code === "USD" || r.code === "EUR"; }) }, null, 2) : "";
     return {
-      js: "const res = await fetch(\"" + u + "\");\nconst { date, rates } = await res.json();\n\nconst usd = rates.find(r => r.code === \"USD\");\nconsole.log(`1 USD = ${usd.mean} TZS on ${date}`);",
+      js: "const res = await fetch(\"" + u + "\");\nconst { date, rates } = await res.json();\n\nconst usd = rates.find(r => r.code === \"USD\");\nconsole.log(`BOT ${date}: 1 USD = ${usd.mean} TZS`);",
       python: "import requests\n\ndata = requests.get(\"" + u + "\").json()\nrates = {r[\"code\"]: r for r in data[\"rates\"]}\n\nprint(data[\"date\"], rates[\"USD\"][\"buying\"], rates[\"USD\"][\"selling\"])",
       php: "<?php\n// WordPress: cache for an hour so pages stay fast\n$data = get_transient('bot_rates');\nif (!$data) {\n  $data = json_decode(file_get_contents('" + u + "'), true);\n  set_transient('bot_rates', $data, HOUR_IN_SECONDS);\n}\nforeach ($data['rates'] as $r) {\n  if (in_array($r['code'], ['USD', 'EUR', 'GBP'])) {\n    echo \"{$r['code']}: {$r['buying']} / {$r['selling']}<br>\";\n  }\n}",
-      sheets: "# Google Sheets: paste into cell A1\n=IMPORTDATA(\"" + BASE + "api/latest.csv\")\n\n# A whole year\n=IMPORTDATA(\"" + BASE + "api/history/2024.csv\")\n\n# Excel: Data → From Web → paste the CSV link",
+      sheets: "# Google Sheets, cell A1\n=IMPORTDATA(\"" + BASE + "api/latest.csv\")\n\n# A whole year\n=IMPORTDATA(\"" + BASE + "api/history/2024.csv\")\n\n# Excel: Data > From Web, then paste the CSV link",
       json: sample
     };
   }
   function showExample(lang) {
-    [].forEach.call(document.querySelectorAll(".tabs button"), function (b) { b.setAttribute("aria-selected", b.dataset.lang === lang); });
+    [].forEach.call(document.querySelectorAll('.tabs [role="tab"]'), function (b) { b.setAttribute("aria-selected", b.dataset.lang === lang); });
     $("code-ex").textContent = examples()[lang];
   }
-  var AGENT_PROMPT = function () {
-    return "Use the Exchange Rates API for official Bank of Tanzania (BOT) exchange rates. Read " + BASE + "llms.txt for the endpoints. " +
-      "Today's rates: " + BASE + "api/latest.json. Rates are TZS per 1 unit of foreign currency, one reference rate per BOT trading day. Always state the BOT date of the rate you quote.";
-  };
+  function agentPrompt() {
+    return "Use the Exchange Rates API (independent mirror of Bank of Tanzania reference rates). Endpoints are listed at " + BASE + "llms.txt. " +
+      "Latest rates: " + BASE + "api/latest.json. Rates are TZS per 1 unit of foreign currency, one reference rate per BOT date. Always state the BOT date of a rate you quote and that it is a reference rate, not a bank's price.";
+  }
 
   /* ---------- widget builder ---------- */
   function renderChips() {
     $("wcur").innerHTML = latest.rates.filter(function (r) { return r.code !== "GOLD" && r.code !== "SDR"; }).map(function (r) {
-      return '<label class="chip" title="' + esc(r.name) + '"><input type="checkbox" value="' + r.code + '"' + (WIDGET_DEFAULT.indexOf(r.code) > -1 ? " checked" : "") + "><span>" + r.code + "</span></label>";
+      return '<label class="chip" title="' + esc(r.name) + '"><input type="checkbox" value="' + r.code + '"' + (STATS.indexOf(r.code) > -1 ? " checked" : "") + "><span>" + r.code + "</span></label>";
     }).join("");
   }
   function updateBuilder() {
@@ -323,8 +274,8 @@
     var attrs = ['src="' + BASE + 'widget.js"', 'data-currencies="' + (o.currencies || "USD") + '"'];
     if (+o.buyMargin) attrs.push('data-buy-margin="' + o.buyMargin + '"');
     if (+o.sellMargin) attrs.push('data-sell-margin="' + o.sellMargin + '"');
-    if (o.theme !== "soft") attrs.push('data-theme="' + o.theme + '"');
-    if (o.title && o.title !== "Today's exchange rates") attrs.push('data-title="' + esc(o.title) + '"');
+    if (o.theme !== "paper") attrs.push('data-theme="' + o.theme + '"');
+    if (o.title && o.title !== "Exchange rates") attrs.push('data-title="' + esc(o.title) + '"');
     $("wsnippet").textContent = "<script " + attrs.join("\n        ") + "></" + "script>";
   }
 
@@ -332,16 +283,19 @@
   document.addEventListener("click", function (e) {
     var c = e.target.closest("[data-copy],[data-copy-from]");
     if (c) copy(c.dataset.copy || $(c.dataset.copyFrom).textContent, c.dataset.copyFrom === "wsnippet" ? "Widget code" : c.dataset.copy ? "Link" : "Code");
-    if (e.target.closest("[data-copy-agent]")) copy(AGENT_PROMPT(), "Agent prompt");
+    if (e.target.closest("[data-copy-agent]")) copy(agentPrompt(), "Agent prompt");
     var tr = e.target.closest("#rates-body tr[data-code]"); if (tr) pick(tr.dataset.code, true);
-    var f = e.target.closest("[data-pick]"); if (f) pick(f.dataset.pick, true);
+    var st = e.target.closest("[data-pick]"); if (st) pick(st.dataset.pick, true);
     var rb = e.target.closest("#ranges button");
     if (rb) {
       rangeDays = +rb.dataset.r;
       [].forEach.call(document.querySelectorAll("#ranges button"), function (x) { x.setAttribute("aria-pressed", x === rb); });
       series(selected).then(function (rows) { drawChart(rangeDays ? rows.slice(-rangeDays) : rows); });
     }
-    var tab = e.target.closest(".tabs button"); if (tab) showExample(tab.dataset.lang);
+    var yb = e.target.closest("[data-year]");
+    if (yb) { year = yb.dataset.year; series(selected).then(function (rows) { renderYears(rows); renderDays(rows); }); }
+    if (e.target.closest("[data-all-years]")) { allYears = !allYears; series(selected).then(renderYears); }
+    var tab = e.target.closest('.tabs [role="tab"]'); if (tab) showExample(tab.dataset.lang);
   });
   $("rates-body").addEventListener("keydown", function (e) {
     var tr = e.target.closest("tr[data-code]");
@@ -349,23 +303,25 @@
   });
   $("search").addEventListener("input", renderTable);
   $("more").addEventListener("click", function () { showAll = !showAll; renderTable(); });
-  $("ins-cur").addEventListener("change", function () { pick(this.value); });
+  $("cur").addEventListener("change", function () { pick(this.value); });
   $("lookup-date").addEventListener("change", updateLookup);
   $("wform").addEventListener("input", updateBuilder);
-  var rz; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () { if (latest) { renderHero(); renderInsights(); } }, 200); });
+  var rz; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () { if (latest) series(selected).then(function (rows) { drawChart(rangeDays ? rows.slice(-rangeDays) : rows); }); }, 200); });
 
+  inlineReceipt();
   renderEndpoints();
   showExample("js");
   getJSON("api/latest.json").then(function (data) {
     latest = data;
     data.rates.forEach(function (r) { byCode[r.code] = r; });
     $("lookup-date").max = data.date;
-    $("rates-sub").textContent = data.rates.length + " currencies for " + niceDate(data.date, true) + ". TZS per 1 unit. Select one to see its history.";
-    $("ins-cur").innerHTML = data.rates.map(function (r) { return '<option value="' + r.code + '">' + r.code + " · " + esc(r.name) + "</option>"; }).join("");
-    $("ins-cur").value = selected;
-    renderHero(); renderFeatured(); renderTable(); renderInsights(); showExample("js"); renderChips(); updateBuilder();
+    $("rates-sub").textContent = "BOT rates for " + day(data.date) + ", TZS per 1 unit. Change is against " + day(data.previous_date);
+    $("chg-head").textContent = "vs " + day(data.previous_date, false);
+    $("cur").innerHTML = data.rates.map(function (r) { return '<option value="' + r.code + '">' + r.code + " · " + esc(r.name) + "</option>"; }).join("");
+    $("cur").value = selected;
+    renderStatus(); renderStats(); renderTable(); renderHistory(); showExample("js"); renderChips(); updateBuilder();
   }, function () {
-    $("hero-updated").textContent = "Rates unavailable right now";
-    $("rates-body").innerHTML = '<tr><td colspan="5" class="empty">Today’s rates could not be loaded. Reload the page, or open the API link below.</td></tr>';
+    $("status-text").textContent = "Rates could not be loaded. Reload the page or open api/latest.json";
+    $("rates-body").innerHTML = '<tr><td colspan="5" class="empty">Rates could not be loaded. Reload the page</td></tr>';
   });
 })();
