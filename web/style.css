@@ -354,3 +354,33 @@ h2 { font-weight: 600; letter-spacing: -.035em; }
   .pair-grid { grid-template-columns: minmax(0, 1fr); }
 }
 .converter .popular { grid-column: 1 / -1; margin: 0; font-size: 13px; }
+
+/* ---------- Consumer converter page ---------- */
+.conv-hero h1 { margin-bottom: 24px; }
+.cc { padding: 24px; }
+.cc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 12px; }
+.cc-side { display: grid; gap: 8px; }
+.cc .conv-field { height: 72px; }
+.cc .conv-field select { font-size: 16px; }
+.cc output { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: right; font: 600 28px var(--mono); font-variant-numeric: tabular-nums; }
+.cc #cc-amount { font-size: 28px; text-align: right; }
+.cc-swap { display: grid; place-items: center; width: 52px; height: 72px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); color: var(--ink); cursor: pointer; transition: background .15s var(--ease); }
+.cc-swap:hover { background: var(--raised); }
+.cc-swap svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; transform: rotate(90deg); }
+.cc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.cc-chips button { height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: none; color: var(--text-2); font: 500 13px var(--mono); cursor: pointer; }
+.cc-chips button:hover { background: var(--raised); color: var(--ink); }
+.cc-result { margin-top: 20px; font-size: clamp(20px, 2.6vw, 28px); font-weight: 500; letter-spacing: -.02em; }
+.cc-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.pops { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 16px; }
+.pop { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; font-weight: 500; transition: background .15s var(--ease); }
+.pop:hover { background: var(--raised); }
+@media (max-width: 760px) {
+  .cc-row { grid-template-columns: minmax(0, 1fr); }
+  .cc-swap { width: 100%; height: 44px; }
+  .cc-swap svg { transform: none; }
+  .cc .conv-field { height: 64px; }
+  .cc output, .cc #cc-amount { font-size: 22px; }
+}
+.cc-side, .converter label, .conv-field { min-width: 0; }
+.conv-field input { width: 100%; }

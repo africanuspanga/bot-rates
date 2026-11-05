@@ -82,7 +82,7 @@ def shell(site, slug, title, description, body, faq, lang="en", flag=None):
     <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 10h9l-2.5-2.5M16.5 14h-9l2.5 2.5"/></svg>
     Exchange Rates
   </a>
-  <nav aria-label="Sections"><a href="{home}#rates">All rates</a><a href="{home}#history">History</a><a href="{home}#api">API</a></nav>
+  <nav aria-label="Sections"><a href="converter">Converter</a><a href="{home}#rates">All rates</a><a href="{home}#history">History</a><a href="{home}#api">API</a></nav>
   <a class="btn btn-sm" href="{home}">All currencies</a>
 </header>
 <main>
@@ -96,6 +96,7 @@ def shell(site, slug, title, description, body, faq, lang="en", flag=None):
     <p>Rates are for information. Banks and bureaux set their own prices. Check bot.go.tz before relying on a figure for a transaction or filing.</p>
   </div>
   <nav class="foot-links" aria-label="Footer">
+    <a href="converter">Currency converter</a>
     <a href="{home}">All BOT rates</a>
     <a href="usd-to-tzs">Dollar to TSh</a>
     <a href="tzs-to-usd">TZS to USD</a>
@@ -127,7 +128,7 @@ def history_rows(series, n=30):
 
 def other_links(current):
     links = [f'<a href="{slug}">{phrase}</a>' for code, slug, phrase in FOREIGN_PAIRS if slug != current]
-    links += ['<a href="tzs-to-usd">TZS to USD</a>', '<a href="bei-ya-dola-leo">Bei ya dola leo</a>']
+    links += ['<a href="tzs-to-usd">TZS to USD</a>', '<a href="bei-ya-dola-leo">Bei ya dola leo</a>', '<a href="converter">Currency converter</a>']
     return '<p class="pair-links">' + " · ".join(l for l in links if f'href="{current}"' not in l) + "</p>"
 
 
@@ -261,6 +262,94 @@ def swahili_page(site, latest_day, latest, series):
     return shell(site, "bei-ya-dola-leo", title, desc, body, faq, lang="sw", flag="us")
 
 
+def converter_page(site, latest_day, latest, names, flags):
+    """Consumer converter: any currency to any other (through TZS) at the BOT rate."""
+    date = en_date(latest_day)
+    m = latest["USD"][2]
+    data = [{"c": "TZS", "n": "Tanzanian Shilling", "f": "tz", "b": 1, "s": 1, "m": 1}] + [
+        {"c": c, "n": names.get(c, c), "f": flags.get(c), "b": r[0], "s": r[1], "m": r[2]}
+        for c, r in sorted(latest.items()) if c not in ("GOLD", "SDR") and flags.get(c)]
+    title = f"Currency Converter Tanzania: USD to TZS, TZS to USD at the BOT rate ({dt.date.fromisoformat(latest_day).strftime('%-d %b %Y')})"
+    desc = (f"Free currency converter for Tanzania. Convert dollars to shillings (1 USD = {fmt(m)} TZS), shillings to dollars, "
+            f"euro, pound, KES and 40 more at the Bank of Tanzania reference rate for {date}.")
+    faq = [
+        ("How much is 1 dollar in Tanzanian shillings today?",
+         f"At the Bank of Tanzania mean rate for {date}, 1 US dollar is {fmt(m)} TZS."),
+        ("Which rate does the converter use?",
+         "The Bank of Tanzania (BOT) reference rate for the latest BOT date. You can switch between the BOT mean, buying and selling rates."),
+        ("Can I convert between two foreign currencies, like euro to Kenyan shilling?",
+         "Yes. The converter goes through the Tanzanian shilling using BOT rates for both currencies."),
+        ("Is this the price a bank or bureau de change will give me?",
+         "No. Banks and bureaux set their own prices around the BOT reference rate. Use this to know the fair reference before you exchange."),
+    ]
+    popular = "".join(f'<a class="pop" href="{slug}"><img class="flag" src="flags/{flags.get(code)}.svg" alt="" width="20" height="20">{phrase}</a>'
+                      for code, slug, phrase in FOREIGN_PAIRS) + \
+        '<a class="pop" href="tzs-to-usd"><img class="flag" src="flags/tz.svg" alt="" width="20" height="20">TZS to USD</a>' + \
+        '<a class="pop" href="bei-ya-dola-leo"><img class="flag" src="flags/tz.svg" alt="" width="20" height="20">Bei ya dola leo</a>'
+    body = f"""
+<section class="pair-hero conv-hero">
+  <p class="status"><span class="stamp-sm">BOT · {esc(dt.date.fromisoformat(latest_day).strftime('%d %b %Y').upper())}</span><span>Bank of Tanzania reference rates</span></p>
+  <h1>Currency converter: dollars to shillings and back</h1>
+  <div class="panel cc" id="cc">
+    <div class="cc-row">
+      <label class="cc-side"><span class="label">From</span>
+        <span class="conv-field"><img class="flag" id="cc-from-flag" src="flags/us.svg" alt="" width="28" height="28"><select id="cc-from" aria-label="From currency"></select><input id="cc-amount" inputmode="decimal" value="100" aria-label="Amount"></span></label>
+      <button type="button" class="cc-swap" id="cc-swap" aria-label="Swap currencies"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v14m0 0l-3-3m3 3l3-3M17 20V6m0 0l-3 3m3-3l3 3"/></svg></button>
+      <label class="cc-side"><span class="label">To</span>
+        <span class="conv-field"><img class="flag" id="cc-to-flag" src="flags/tz.svg" alt="" width="28" height="28"><select id="cc-to" aria-label="To currency"></select><output id="cc-out" aria-live="polite">{fmt(100 * m, 2)}</output></span></label>
+    </div>
+    <div class="cc-chips" id="cc-chips">{"".join(f'<button type="button" data-amt="{a}">{a:,}</button>' for a in [1, 10, 50, 100, 500, 1000, 10000])}</div>
+    <p class="cc-result" id="cc-result">100 US Dollar = {fmt(100 * m, 2)} Tanzanian Shilling</p>
+    <div class="cc-foot">
+      <div class="seg" role="group" aria-label="BOT rate" id="cc-rate"><button data-r="m" aria-pressed="true">Mean</button><button data-r="b">BOT buying</button><button data-r="s">BOT selling</button></div>
+      <p class="meta" id="cc-note">BOT rate for {date}</p>
+    </div>
+  </div>
+</section>
+<section class="section">
+  <h2>Popular conversions</h2>
+  <div class="pops">{popular}</div>
+</section>
+<section class="section">
+  <h2>Questions</h2>
+  <dl class="faq">{"".join(f"<div><dt>{esc(q)}</dt><dd>{esc(a)}</dd></div>" for q, a in faq)}</dl>
+  <p class="pair-links">Building an app or website? Use the same rates through the free <a href="{site.rstrip('/')}#api">Exchange Rates API</a>.</p>
+</section>
+<script>
+(function () {{
+  var D = {json.dumps(data, separators=(",", ":"))}, by = {{}}, kind = "m", DATE = {json.dumps(date)};
+  D.forEach(function (x) {{ by[x.c] = x; }});
+  var $ = function (id) {{ return document.getElementById(id); }};
+  var q = new URLSearchParams(location.search);
+  var opts = D.map(function (x) {{ return '<option value="' + x.c + '">' + x.c + '</option>'; }}).join("");
+  $("cc-from").innerHTML = opts; $("cc-to").innerHTML = opts;
+  $("cc-from").value = by[(q.get("from") || "").toUpperCase()] ? q.get("from").toUpperCase() : "USD";
+  $("cc-to").value = by[(q.get("to") || "").toUpperCase()] ? q.get("to").toUpperCase() : "TZS";
+  if (q.get("amount")) $("cc-amount").value = q.get("amount");
+  function f(n) {{ var d = n >= 100 ? 2 : n >= 1 ? 3 : n >= .01 ? 4 : 6; return n.toLocaleString("en-US", {{ minimumFractionDigits: d, maximumFractionDigits: d }}); }}
+  function num(v) {{ return parseFloat(String(v).replace(/[^0-9.]/g, "")) || 0; }}
+  function run() {{
+    var a = by[$("cc-from").value], b = by[$("cc-to").value], amt = num($("cc-amount").value);
+    var out = amt * a[kind] / b[kind];
+    $("cc-out").textContent = f(out);
+    $("cc-from-flag").src = "flags/" + a.f + ".svg"; $("cc-to-flag").src = "flags/" + b.f + ".svg";
+    $("cc-result").textContent = f(amt) + " " + a.n + " = " + f(out) + " " + b.n;
+    var label = {{ m: "mean", b: "buying", s: "selling" }}[kind];
+    var one = a.c !== "TZS" ? "1 " + a.c + " = " + f(a[kind]) + " TZS" : "1 " + b.c + " = " + f(b[kind]) + " TZS";
+    $("cc-note").textContent = "BOT " + label + " rate for " + DATE + " · " + one;
+    history.replaceState(null, "", location.pathname + "?from=" + a.c + "&to=" + b.c + "&amount=" + amt);
+  }}
+  ["cc-from", "cc-to", "cc-amount"].forEach(function (id) {{ $(id).addEventListener("input", run); $(id).addEventListener("change", run); }});
+  $("cc-swap").addEventListener("click", function () {{ var t = $("cc-from").value; $("cc-from").value = $("cc-to").value; $("cc-to").value = t; run(); }});
+  $("cc-chips").addEventListener("click", function (e) {{ var b = e.target.closest("[data-amt]"); if (b) {{ $("cc-amount").value = b.dataset.amt; run(); }} }});
+  $("cc-rate").addEventListener("click", function (e) {{ var b = e.target.closest("[data-r]"); if (!b) return; kind = b.dataset.r;
+    [].forEach.call($("cc-rate").children, function (x) {{ x.setAttribute("aria-pressed", x === b); }}); run(); }});
+  run();
+}})();
+</script>"""
+    return shell(site, "converter", title, desc, body, faq, flag="tz")
+
+
 def write_pages(out, site, latest_day, latest, all_days, names, flags):
     """Write <slug>.html pages (GitHub Pages serves them extensionless) and return their slugs."""
     def series(code):
@@ -275,4 +364,5 @@ def write_pages(out, site, latest_day, latest, all_days, names, flags):
         slugs.append(slug)
     (out / "tzs-to-usd.html").write_text(reverse_page(site, latest_day, latest["USD"], series("USD")))
     (out / "bei-ya-dola-leo.html").write_text(swahili_page(site, latest_day, latest, series("USD")))
-    return slugs + ["tzs-to-usd", "bei-ya-dola-leo"]
+    (out / "converter.html").write_text(converter_page(site, latest_day, latest, names, flags))
+    return ["converter"] + slugs + ["tzs-to-usd", "bei-ya-dola-leo"]
