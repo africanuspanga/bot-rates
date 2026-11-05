@@ -1,0 +1,59 @@
+name: Update BOT rates
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 09:00 EAT
+    - cron: "0 10 * * *"  # 13:00 EAT, catches late BOT publications
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["web/**", "scraper/build_api.py", ".github/workflows/**"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-rates
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch today's rates from bot.go.tz
+        if: github.event_name != 'push'
+        run: python scraper/bot_rates.py daily
+
+      - name: Save new rates to the repo
+        if: github.event_name != 'push'
+        run: |
+          git add data
+          if git diff --cached --quiet; then
+            echo "No new BOT rates since last run."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Rates for $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Build API and site
+        run: python scraper/build_api.py
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

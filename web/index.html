@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiwango · BOT daily rates</title>
+<meta name="description" content="Bank of Tanzania daily exchange rates as a free JSON/CSV API and a copy-paste website widget for bureaux de change. History from 1999.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230E3A33'/><text x='16' y='23' font-family='monospace' font-size='18' font-weight='700' fill='%23F0C96A' text-anchor='middle'>K</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#rates">Skip to all rates</a>
+<header class="top">
+  <a class="brand" href="./" aria-label="Kiwango home"><span class="brand-mark">K</span>Kiwango</a>
+  <nav aria-label="Sections">
+    <a href="#rates">Rates</a><a href="#history">History</a><a href="#api">API</a><a href="#widget">Widget</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Bank of Tanzania · indicative rates</p>
+      <h1>Today’s BOT rates, ready for your website.</h1>
+      <p class="lede">Every morning we read the rates the Bank of Tanzania publishes and turn them into a free API and a widget you paste into any site. No sign-up, no keys. History back to June&nbsp;1999.</p>
+      <div class="hero-actions">
+        <a class="btn btn-solid" href="#widget">Add the widget to a site</a>
+        <a class="btn" href="#api">Use the API</a>
+      </div>
+    </div>
+
+    <figure class="board" aria-labelledby="board-title">
+      <div class="board-head">
+        <span id="board-title" class="board-title">TZS · Shilingi</span>
+        <time id="board-date" class="board-date">Loading…</time>
+      </div>
+      <div class="board-cols" aria-hidden="true"><span></span><span>Buying</span><span>Selling</span></div>
+      <ol id="board-rows" class="board-rows" aria-live="polite"></ol>
+      <figcaption class="board-foot">TZS per 1 unit · source: bot.go.tz</figcaption>
+    </figure>
+  </section>
+
+  <section id="rates" class="block">
+    <div class="block-head">
+      <div>
+        <h2>All currencies</h2>
+        <p class="sub" id="rates-sub">Select a currency to see its history.</p>
+      </div>
+      <div class="tools">
+        <label class="search"><span class="sr">Search currencies</span>
+          <input id="search" type="search" placeholder="Search: USD, euro, kenya…" autocomplete="off"></label>
+        <a class="btn btn-small" id="dl-latest" href="api/latest.csv" download>Download CSV</a>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="rates">
+        <thead><tr><th scope="col">Code</th><th scope="col">Currency</th><th scope="col" class="n">Buying</th><th scope="col" class="n">Selling</th><th scope="col" class="n">Mean</th><th scope="col" class="n">Since yesterday</th></tr></thead>
+        <tbody id="rates-body"><tr><td colspan="6" class="empty">Loading today’s rates…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="history" class="block">
+    <div class="block-head">
+      <div>
+        <h2 id="hist-title">US Dollar history</h2>
+        <p class="sub" id="hist-sub">Mean rate in TZS. Shaded band is BOT buying to selling.</p>
+      </div>
+      <div class="seg" role="group" aria-label="Time range" id="ranges">
+        <button data-r="30">1M</button><button data-r="182">6M</button><button data-r="365" aria-pressed="true">1Y</button><button data-r="1826">5Y</button><button data-r="0">All</button>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-stats" id="hist-stats"></div>
+      <div class="chart" id="chart" role="img" aria-label="Exchange rate history chart"></div>
+      <div class="chart-tip" id="tip" hidden></div>
+    </div>
+    <div class="lookup">
+      <label for="lookup-date">Rate on a date</label>
+      <input id="lookup-date" type="date" min="1999-06-24">
+      <output id="lookup-out" for="lookup-date">Pick any day since 24 June 1999.</output>
+    </div>
+  </section>
+
+  <section id="api" class="block">
+    <div class="block-head">
+      <div>
+        <h2>API</h2>
+        <p class="sub">Plain JSON and CSV files. No key, no sign-up, no rate limit. Copy a link and use it.</p>
+      </div>
+    </div>
+
+    <ul class="endpoints" id="endpoints"></ul>
+
+    <div class="code-card">
+      <div class="tabs" role="tablist" aria-label="Code examples">
+        <button role="tab" aria-selected="true" data-lang="js">JavaScript</button>
+        <button role="tab" aria-selected="false" data-lang="php">PHP / WordPress</button>
+        <button role="tab" aria-selected="false" data-lang="curl">cURL</button>
+        <button role="tab" aria-selected="false" data-lang="json">Response</button>
+      </div>
+      <div class="code-wrap">
+        <button class="copy" data-copy-from="code-ex">Copy</button>
+        <pre><code id="code-ex"></code></pre>
+      </div>
+    </div>
+
+    <dl class="facts">
+      <div><dt>Updates</dt><dd>Twice a day (09:00 and 13:00 EAT). BOT publishes once per trading day; weekends repeat Friday.</dd></div>
+      <div><dt>Units</dt><dd>TZS per 1 unit of foreign currency. Gold is per troy ounce.</dd></div>
+      <div><dt>History</dt><dd>24 June 1999 to today, one file per year or per currency.</dd></div>
+      <div><dt>Reliability</dt><dd>If BOT changes its page or sends odd numbers, the update stops instead of publishing bad data.</dd></div>
+    </dl>
+  </section>
+
+  <section id="widget" class="block">
+    <div class="block-head">
+      <div>
+        <h2>Website widget</h2>
+        <p class="sub">Pick currencies and your margin, then paste one line into the bureau’s site. It refreshes by itself every day.</p>
+      </div>
+    </div>
+
+    <div class="builder">
+      <form class="builder-form" id="wform">
+        <fieldset>
+          <legend>Currencies</legend>
+          <div class="chips" id="wcur"></div>
+        </fieldset>
+        <fieldset class="row2">
+          <legend>Your margin on BOT rates</legend>
+          <label>We buy at <input type="number" id="wbuy" value="0" step="0.1" min="0" max="20" inputmode="decimal"> % below</label>
+          <label>We sell at <input type="number" id="wsell" value="0" step="0.1" min="0" max="20" inputmode="decimal"> % above</label>
+        </fieldset>
+        <fieldset class="row2">
+          <legend>Look</legend>
+          <label>Title <input type="text" id="wtitle" value="Today's exchange rates" maxlength="60"></label>
+          <label>Style
+            <select id="wtheme"><option value="board">Rate board</option><option value="light">Light</option><option value="dark">Dark</option></select>
+          </label>
+        </fieldset>
+      </form>
+
+      <div class="builder-out">
+        <p class="label">Preview</p>
+        <div class="preview" id="wpreview"></div>
+        <p class="label">Paste this where the rates should appear</p>
+        <div class="code-wrap">
+          <button class="copy" data-copy-from="wsnippet">Copy</button>
+          <pre><code id="wsnippet"></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p><strong>Source:</strong> <a href="https://www.bot.go.tz/ExchangeRate/excRates?lang=en" rel="noopener">Bank of Tanzania indicative exchange rates</a>. Kiwango is an independent mirror, not affiliated with or endorsed by the Bank of Tanzania.</p>
+  <p>Rates are for information only and may differ from the prices a bureau or bank offers. Check bot.go.tz before relying on them.</p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="widget.js" data-manual defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>
