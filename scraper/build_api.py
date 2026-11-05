@@ -68,6 +68,22 @@ def find_spikes(all_days, window=5, tolerance=0.06, gross=0.3):
     return bad
 
 
+FLAGS = {
+    "AED": "ae", "ATS": "at", "AUD": "au", "BEF": "be", "BIF": "bi", "BWP": "bw", "CAD": "ca", "CHF": "ch", "CNY": "cn",
+    "CUC": "cu", "DEM": "de", "DKK": "dk", "DZD": "dz", "ESP": "es", "EUR": "european_union", "FIM": "fi", "FRF": "fr",
+    "GBP": "gb", "GOLD": "gold", "HKD": "hk", "IDR": "id", "IEP": "ie", "INR": "in", "IQD": "iq", "IRR": "ir", "ITL": "it",
+    "JPY": "jp", "KES": "ke", "KRW": "kr", "KWD": "kw", "MWK": "mw", "MXM": "mw", "MXN": "mx", "MYR": "my", "MZM": "mz",
+    "NAD": "na", "NGN": "ng", "NLG": "nl", "NOK": "no", "NZD": "nz", "PKR": "pk", "PTE": "pt", "QAR": "qa", "RWF": "rw",
+    "SAR": "sa", "SDR": "sdr", "SEK": "se", "SGD": "sg", "TRY": "tr", "UGX": "ug", "USD": "us", "ZAR": "za", "ZMK": "zm",
+    "ZMW": "zm", "ZWD": "zw",
+}
+
+
+def flag_url(code):
+    f = FLAGS.get(code)
+    return f"{SITE_URL}flags/{f}.svg" if f else None
+
+
 def write_json(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, separators=(",", ":"), ensure_ascii=False))
@@ -84,7 +100,7 @@ def write_csv(path, rows):
 
 def rate_obj(code, row):
     b, s, m = row
-    return {"code": code, "name": NAMES.get(code, code), "buying": b, "selling": s, "mean": m}
+    return {"code": code, "name": NAMES.get(code, code), "flag": flag_url(code), "buying": b, "selling": s, "mean": m}
 
 
 def write_agent_files(latest_day, codes, first_day):
@@ -208,7 +224,7 @@ def main():
         })
     write_json(API / "currencies.json", {
         "source": SOURCE, "latest_date": latest_day,
-        "currencies": [{"code": c, "name": NAMES.get(c, c), "first_date": rows[0][0], "last_date": rows[-1][0],
+        "currencies": [{"code": c, "name": NAMES.get(c, c), "flag": flag_url(c), "first_date": rows[0][0], "last_date": rows[-1][0],
                         "active": c in latest} for c, rows in sorted(series.items())],
     })
     write_agent_files(latest_day, sorted(latest), days[0])

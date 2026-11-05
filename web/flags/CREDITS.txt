@@ -1,0 +1,2 @@
+Flag icons from circle-flags by HatScripts (https://github.com/HatScripts/circle-flags), MIT License.
+gold.svg and sdr.svg are original to this project.

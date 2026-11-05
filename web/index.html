@@ -32,16 +32,23 @@
   <section class="hero">
     <div class="hero-copy">
       <p class="status" id="status"><span class="stamp-sm" id="status-stamp">BOT · –</span><span id="status-text">Fetching the latest BOT rates</span></p>
-      <h1>Bank of Tanzania exchange rates, ready for your code</h1>
+      <h1>Bank of Tanzania exchange rates, <span class="hl">ready for your code</span></h1>
       <p class="lede">BOT publishes reference rates for 44 currencies on its website every day. We fetch them, check them and serve them as a free API, a website widget and a history back to June 1999. An independent project, not affiliated with the Bank of Tanzania.</p>
       <div class="actions">
         <a class="btn btn-primary" href="#api">Read the API</a>
         <a class="btn" href="#widget">Add the widget</a>
       </div>
     </div>
-    <figure class="receipt" id="receipt">
-      <img src="receipt.svg" width="560" height="760" alt="Receipt showing the latest Bank of Tanzania reference rates for eight currencies, with a BOT date stamp" fetchpriority="high">
-    </figure>
+    <div class="hero-art">
+      <img class="sticker s1" src="flags/tz.svg" alt="" width="76" height="76">
+      <img class="sticker s2" src="flags/us.svg" alt="" width="64" height="64">
+      <img class="sticker s3" src="flags/european_union.svg" alt="" width="56" height="56">
+      <img class="sticker s4" src="flags/gb.svg" alt="" width="52" height="52">
+      <img class="sticker s5" src="flags/ke.svg" alt="" width="44" height="44">
+      <figure class="receipt" id="receipt">
+        <img src="receipt.svg" width="560" height="760" alt="Receipt showing the latest Bank of Tanzania reference rates for eight currencies, with a BOT date stamp" fetchpriority="high">
+      </figure>
+    </div>
   </section>
 
   <section id="rates" class="section">
@@ -173,8 +180,9 @@
   </section>
 </main>
 
-<footer class="foot">
+<div class="foot-wrap"><footer class="foot">
   <div class="foot-main">
+    <span class="foot-tag">Independent · not an official BOT service</span>
     <p class="foot-brand">Exchange Rates is a project by <a href="https://www.driftmark.co.tz/" rel="noopener">Driftmark Technologies</a></p>
     <p>An independent mirror of the reference rates the Bank of Tanzania publishes at <a href="https://www.bot.go.tz/ExchangeRate/excRates?lang=en" rel="noopener">bot.go.tz</a>. It is not an official BOT service and is not affiliated with or endorsed by the Bank of Tanzania.</p>
     <p>Rates are for information. Banks and bureaux set their own prices. Check bot.go.tz before relying on a figure for a transaction or filing.</p>
@@ -185,8 +193,9 @@
     <a href="llms.txt">llms.txt</a>
     <a href="openapi.json">openapi.json</a>
     <a href="https://www.driftmark.co.tz/" rel="noopener">driftmark.co.tz</a>
+    <a href="flags/CREDITS.txt">Flag credits</a>
   </nav>
-</footer>
+</footer></div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="widget.js" data-manual defer></script>

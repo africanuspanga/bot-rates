@@ -42,7 +42,8 @@
       var r = byCode[c];
       var buy = r.buying != null ? r.buying * (1 - buyM / 100) : null;
       var sell = r.selling != null ? r.selling * (1 + sellM / 100) : null;
-      return '<tr><th scope="row"><span class="c">' + esc(c) + '</span><span class="n">' + esc(r.name) + "</span></th><td>" + fmt(buy) + "</td><td>" + fmt(sell) + "</td></tr>";
+      var f = r.flag ? '<img class="fl" src="' + esc(r.flag) + '" alt="" width="28" height="28">' : "";
+      return '<tr><th scope="row">' + f + '<span><span class="c">' + esc(c) + '</span><span class="n">' + esc(r.name) + "</span></span></th><td>" + fmt(buy) + "</td><td>" + fmt(sell) + "</td></tr>";
     }).join("");
 
     root.innerHTML =
@@ -56,6 +57,7 @@
       "thead th{height:28px;font:400 11px " + mono + ";color:" + t.muted + ";text-align:right}" +
       "thead th:first-child{text-align:left}" +
       "tbody th{padding:10px 0;text-align:left;font-weight:400;border-top:1px solid " + t.line + "}" +
+      "tbody th{display:flex;align-items:center;gap:10px}.fl{width:28px;height:28px;border-radius:50%;flex:none}" +
       ".c{display:block;font:500 14px " + mono + "}.n{display:block;margin-top:2px;font-size:12px;color:" + t.muted + "}" +
       "td{padding:10px 0 10px 12px;text-align:right;border-top:1px solid " + t.line + ";font:400 15px " + mono + ";font-variant-numeric:tabular-nums}" +
       ".f{margin:12px 0 0;font-size:11px;line-height:16px;color:" + t.muted + "}.f a{color:inherit}" +

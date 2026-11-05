@@ -28,6 +28,7 @@
   }
   function stampDate(iso) { var d = new Date(iso + "T00:00:00"); return ("0" + d.getDate()).slice(-2) + " " + MONTHS[d.getMonth()].toUpperCase() + " " + d.getFullYear(); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
+  function flag(r) { return r.flag ? '<img class="flag" src="flags/' + esc(r.flag.split("/").pop()) + '" alt="" width="24" height="24" loading="lazy">' : '<span class="flag"></span>'; }
   function cls(p) { return p > 0 ? "up" : p < 0 ? "down" : ""; }
   function toast(msg) {
     var t = $("toast"); t.textContent = msg; t.classList.add("show");
@@ -63,7 +64,7 @@
   function renderStats() {
     $("stats").innerHTML = STATS.filter(function (c) { return byCode[c]; }).map(function (c) {
       var r = byCode[c], p = dayChange(r);
-      return '<button class="panel stat" data-pick="' + c + '"><span class="label"><span>' + esc(r.name) + "</span><span>" + c + '</span></span><p class="figure">' + fmt(r.mean) +
+      return '<button class="panel stat" data-pick="' + c + '"><span class="label"><span>' + esc(r.name) + " · " + c + "</span>" + flag(r) + '</span><p class="figure">' + fmt(r.mean) +
         '</p><p class="meta"><span class="' + cls(p) + '">' + (p == null ? "–" : signed(p)) + "</span> vs " + day(latest.previous_date, false) + "</p></button>";
     }).join("");
   }
@@ -77,7 +78,7 @@
     $("more").textContent = showAll ? "Show fewer" : "Show all " + all.length + " currencies";
     $("rates-body").innerHTML = rows.length ? rows.map(function (r) {
       var p = dayChange(r);
-      return '<tr tabindex="0" data-code="' + r.code + '" aria-selected="' + (r.code === selected) + '"><td><span class="code">' + r.code + '</span><span class="name">' + esc(r.name) +
+      return '<tr tabindex="0" data-code="' + r.code + '" aria-selected="' + (r.code === selected) + '"><td><span class="code">' + flag(r) + r.code + '</span><span class="name">' + esc(r.name) +
         '</span></td><td class="n">' + fmt(r.buying) + '</td><td class="n">' + fmt(r.selling) + '</td><td class="n hide-sm">' + fmt(r.mean) +
         '</td><td class="n ' + cls(p) + '">' + (p == null ? "–" : signed(p)) + "</td></tr>";
     }).join("") : '<tr><td colspan="5" class="empty">No currency matches “' + esc(q) + "”. Try a code like USD or a name like euro</td></tr>";
