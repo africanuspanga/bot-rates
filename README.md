@@ -1,4 +1,4 @@
-# Kiwango: Bank of Tanzania daily exchange rates
+# Exchange Rates: Bank of Tanzania daily exchange rates for developers
 
 The Bank of Tanzania (BOT) publishes indicative exchange rates once per trading day on
 [bot.go.tz](https://www.bot.go.tz/ExchangeRate/excRates?lang=en) but offers no API.
@@ -21,6 +21,8 @@ Replace `BASE` with the Pages URL, e.g. `https://africanuspanga.github.io/bot-ra
 | One currency, full history | `BASE/api/currency/USD.json` |
 | One year, all currencies | `BASE/api/history/2025.json` or `.csv` |
 | Currency list | `BASE/api/currencies.json` |
+| Guide for AI assistants | `BASE/llms.txt` |
+| OpenAPI 3 spec | `BASE/openapi.json` |
 
 All rates are **TZS per 1 unit** of the foreign currency (gold per troy ounce).
 
@@ -42,10 +44,10 @@ All rates are **TZS per 1 unit** of the foreign currency (gold per troy ounce).
 <script src="BASE/widget.js"
         data-currencies="USD,EUR,GBP,KES"
         data-buy-margin="1" data-sell-margin="1.5"
-        data-theme="board"></script>
+        data-theme="soft"></script>
 ```
 Options: `data-currencies`, `data-buy-margin` / `data-sell-margin` (percent below/above BOT),
-`data-theme` (`board`, `light`, `dark`), `data-title`, `data-target` (CSS selector to render into).
+`data-theme` (`soft`, `dark`, `board`), `data-title`, `data-target` (CSS selector to render into).
 The site's **Widget** section builds this snippet with a live preview.
 
 ## How it works
@@ -68,8 +70,10 @@ python scraper/build_api.py && python -m http.server -d _site 8000
 ## Data quality
 
 BOT's archive has occasional typos. Rows whose buying/selling are more than 25% from the mean
-are skipped at fetch time, and single-day values more than 30% away from both the previous and
-next days are left out of the published API (raw values stay in `data/`).
+are skipped at fetch time. In the published API, a value is also left out when it is more than 30%
+away from both the previous and next days, or more than 6% away from both while those neighbours
+agree with each other. Real moves such as Brexit or the 2015 Swiss franc unpeg are kept; raw values
+stay in `data/`.
 
 ## Disclaimer
 
