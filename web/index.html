@@ -28,6 +28,11 @@
   <a class="btn btn-sm" href="https://github.com/africanuspanga/bot-rates" rel="noopener">GitHub</a>
 </header>
 
+<div class="ticker" aria-label="Bank of Tanzania reference rates, scrolling">
+  <span class="ticker-date" id="ticker-date">BOT · –</span>
+  <div class="ticker-viewport"><div class="ticker-track" id="ticker-track"></div></div>
+</div>
+
 <main>
   <section class="hero">
     <div class="hero-copy">
@@ -61,6 +66,13 @@
         <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><span class="sr">Search currencies</span><input id="search" type="search" placeholder="Search" autocomplete="off"></label>
         <a class="btn btn-sm" href="api/latest.csv" download>Download CSV</a>
       </div>
+    </div>
+    <div class="panel converter home-converter" id="converter">
+      <label><span class="label">Amount</span><span class="conv-field"><select id="conv-cur" aria-label="Currency"></select><input id="conv-a" inputmode="decimal" value="100" aria-label="Amount in foreign currency"></span></label>
+      <span class="conv-eq" aria-hidden="true">=</span>
+      <label><span class="label">Tanzanian shillings</span><span class="conv-field"><img class="flag" src="flags/tz.svg" alt="" width="24" height="24"><input id="conv-b" inputmode="decimal" aria-label="Amount in Tanzanian shillings"></span></label>
+      <p class="meta" id="conv-note">Converts at the BOT mean rate</p>
+      <p class="pair-links popular">Popular: <a href="usd-to-tzs">Dollar to TSh</a> · <a href="tzs-to-usd">TZS to USD</a> · <a href="eur-to-tzs">Euro to TZS</a> · <a href="gbp-to-tzs">Pound to TZS</a> · <a href="kes-to-tzs">KES to TZS</a> · <a href="ugx-to-tzs">UGX to TZS</a> · <a href="bei-ya-dola-leo">Bei ya dola leo</a></p>
     </div>
     <div class="stats" id="stats"></div>
     <div class="panel table-panel">

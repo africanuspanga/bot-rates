@@ -60,6 +60,35 @@
     }, function () {});
   }
 
+  /* ---------- ticker ---------- */
+  function renderTicker() {
+    var rank = function (c) { var i = POPULAR.indexOf(c); return i < 0 ? 99 : i; };
+    var items = latest.rates.filter(function (r) { return r.code !== "SDR"; })
+      .sort(function (a, b) { return rank(a.code) - rank(b.code) || a.code.localeCompare(b.code); })
+      .map(function (r) {
+        var p = dayChange(r), dir = p > 0 ? "up" : p < 0 ? "down" : "flat";
+        return '<span class="tick" data-pick="' + r.code + '">' + flag(r) + '<b>' + r.code + "/TZS</b><span>" + fmt(r.mean) +
+          '</span><i class="' + dir + '">' + (p > 0 ? "▲ " : p < 0 ? "▼ " : "■ ") + (p == null ? "–" : Math.abs(p).toFixed(2) + "%") + "</i></span>";
+      }).join("");
+    $("ticker-date").textContent = "BOT · " + stampDate(latest.date);
+    // Two copies so the strip loops seamlessly; the second is hidden from screen readers
+    $("ticker-track").innerHTML = '<div class="ticker-set">' + items + '</div><div class="ticker-set" aria-hidden="true">' + items + "</div>";
+  }
+
+  /* ---------- converter ---------- */
+  function num(v) { return parseFloat(String(v).replace(/[^0-9.]/g, "")) || 0; }
+  function convert(from) {
+    var r = byCode[$("conv-cur").value]; if (!r) return;
+    if (from === "a") $("conv-b").value = fmt(num($("conv-a").value) * r.mean, 2);
+    else $("conv-a").value = fmt(num($("conv-b").value) / r.mean);
+    $("conv-note").textContent = "At the BOT mean rate: 1 " + r.code + " = " + fmt(r.mean) + " TZS on " + day(latest.date);
+  }
+  function renderConverter() {
+    $("conv-cur").innerHTML = latest.rates.filter(function (r) { return r.code !== "GOLD" && r.code !== "SDR"; })
+      .map(function (r) { return '<option value="' + r.code + '"' + (r.code === "USD" ? " selected" : "") + ">" + r.code + "</option>"; }).join("");
+    convert("a");
+  }
+
   /* ---------- rates ---------- */
   function renderStats() {
     $("stats").innerHTML = STATS.filter(function (c) { return byCode[c]; }).map(function (c) {
@@ -309,6 +338,9 @@
     if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pick(tr.dataset.code, true); }
   });
   $("search").addEventListener("input", renderTable);
+  $("conv-a").addEventListener("input", function () { convert("a"); });
+  $("conv-b").addEventListener("input", function () { convert("b"); });
+  $("conv-cur").addEventListener("change", function () { convert("a"); });
   $("more").addEventListener("click", function () { showAll = !showAll; renderTable(); });
   $("cur").addEventListener("change", function () { pick(this.value); });
   $("lookup-date").addEventListener("change", updateLookup);
@@ -326,7 +358,7 @@
     $("chg-head").textContent = "vs " + day(data.previous_date, false);
     $("cur").innerHTML = data.rates.map(function (r) { return '<option value="' + r.code + '">' + r.code + " · " + esc(r.name) + "</option>"; }).join("");
     $("cur").value = selected;
-    renderStatus(); renderStats(); renderTable(); renderHistory(); showExample("js"); renderChips(); updateBuilder();
+    renderStatus(); renderTicker(); renderConverter(); renderStats(); renderTable(); renderHistory(); showExample("js"); renderChips(); updateBuilder();
   }, function () {
     $("status-text").textContent = "Rates could not be loaded. Reload the page or open api/latest.json";
     $("rates-body").innerHTML = '<tr><td colspan="5" class="empty">Rates could not be loaded. Reload the page</td></tr>';

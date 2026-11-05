@@ -8,14 +8,17 @@ Output (all served as plain files, no server):
   api/currency/<CODE>.json               full daily history of one currency
 """
 import csv
+import datetime as dt
 import hashlib
 import io
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 
 from receipt_svg import render as render_receipt
+from seo_pages import write_pages
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "history"
@@ -229,14 +232,32 @@ def main():
                         "active": c in latest} for c, rows in sorted(series.items())],
     })
     write_agent_files(latest_day, sorted(latest), days[0])
+    # Landing pages for the searches people make ("dollar to tsh", "usd to tzs", "bei ya dola leo"...)
+    flag_files = {c: f for c, f in FLAGS.items()}
+    slugs = write_pages(OUT, SITE_URL, latest_day, latest, all_days, NAMES, flag_files)
+
     # Pin every relative URL in the page to the public address (the site is served under a sub-path)
     index = OUT / "index.html"
+    usd = latest["USD"]
+    day_label = dt.date.fromisoformat(latest_day).strftime("%-d %b %Y")
     html = index.read_text().replace(
-        "<head>\n", f'<head>\n<base href="{SITE_URL}">\n<link rel="canonical" href="{SITE_URL}">\n', 1)
-    for asset in ("style.css", "app.js", "widget.js", "receipt.svg"):  # cache-bust so a new build shows at once
-        ver = hashlib.sha1((OUT / asset).read_bytes()).hexdigest()[:8]
-        html = html.replace(f'"{asset}"', f'"{asset}?v={ver}"')
-    index.write_text(html)
+        "<head>\n", f'<head>\n<base href="{SITE_URL}">\n<link rel="canonical" href="{SITE_URL.rstrip("/")}">\n', 1)
+    html = re.sub(r"<title>.*?</title>", f"<title>BOT Exchange Rate Today: USD to TZS {usd[2]:,.2f} ({day_label}) | Exchange Rates</title>", html, count=1)
+    html = re.sub(r'<meta name="description" content="[^"]*">',
+                  f'<meta name="description" content="Bank of Tanzania (BOT) exchange rates for {day_label}: dollar to TSh {usd[2]:,.2f}, euro, pound, KES and 40 more. '
+                  'Converter, previous BOT rates since 1999, free API and widget. Independent project by Driftmark Technologies.">', html, count=1)
+    pages = [index] + [OUT / f"{slug}.html" for slug in slugs]
+    for page in pages:
+        text = html if page == index else page.read_text()
+        for asset in ("style.css", "app.js", "widget.js", "receipt.svg"):  # cache-bust so a new build shows at once
+            ver = hashlib.sha1((OUT / asset).read_bytes()).hexdigest()[:8]
+            text = text.replace(f'"{asset}"', f'"{asset}?v={ver}"')
+        page.write_text(text)
+
+    root = SITE_URL.rstrip("/")
+    urls = [root] + [f"{SITE_URL}{slug}" for slug in slugs]
+    (OUT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+        "".join(f"<url><loc>{u}</loc><lastmod>{latest_day}</lastmod><changefreq>daily</changefreq></url>\n" for u in urls) + "</urlset>\n")
     (OUT / ".nojekyll").write_text("")
     print(f"Built _site: latest {latest_day}, {len(days)} days, {len(series)} currencies, "
           f"{len(spikes)} one-day BOT typos excluded")
