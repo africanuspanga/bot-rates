@@ -3,8 +3,8 @@ with an orange rubber date stamp. Pure SVG, regenerated on every build from real
 import datetime as dt
 import hashlib
 
-PAPER, PAPER_SHADE, INK, INK_SOFT, STAMP = "#FBFAF3", "#EFEDE1", "#3F4F4E", "#7A8582", "#E0643B"
-MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace"
+PAPER, PAPER_SHADE, INK, INK_SOFT, STAMP = "#FFFFFF", "#F2F2F2", "#0A0A0A", "#6B6B6B", "#0A0A0A"
+MONO = "'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace"
 ROWS = ["USD", "EUR", "GBP", "KES", "UGX", "ZAR", "AED", "CNY"]
 
 
@@ -91,7 +91,7 @@ def render(date_iso, rates, checked_utc=None):
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 {H}" width="560" height="{H}" role="img" aria-label="Receipt showing Bank of Tanzania reference rates for {d.strftime("%d %B %Y")}">
 <defs>
   <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{PAPER}"/><stop offset=".7" stop-color="{PAPER}"/><stop offset="1" stop-color="{PAPER_SHADE}"/></linearGradient>
-  <filter id="shadow" x="-20%" y="-10%" width="140%" height="130%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#2C3837" flood-opacity=".16"/><feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#2C3837" flood-opacity=".12"/></filter>
+  <filter id="shadow" x="-20%" y="-10%" width="140%" height="130%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity=".14"/><feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000000" flood-opacity=".1"/></filter>
   <filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
     <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
     <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" result="d"/>

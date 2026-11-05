@@ -8,6 +8,7 @@ Output (all served as plain files, no server):
   api/currency/<CODE>.json               full daily history of one currency
 """
 import csv
+import hashlib
 import io
 import json
 import os
@@ -228,6 +229,14 @@ def main():
                         "active": c in latest} for c, rows in sorted(series.items())],
     })
     write_agent_files(latest_day, sorted(latest), days[0])
+    # Pin every relative URL in the page to the public address (the site is served under a sub-path)
+    index = OUT / "index.html"
+    html = index.read_text().replace(
+        "<head>\n", f'<head>\n<base href="{SITE_URL}">\n<link rel="canonical" href="{SITE_URL}">\n', 1)
+    for asset in ("style.css", "app.js", "widget.js", "receipt.svg"):  # cache-bust so a new build shows at once
+        ver = hashlib.sha1((OUT / asset).read_bytes()).hexdigest()[:8]
+        html = html.replace(f'"{asset}"', f'"{asset}?v={ver}"')
+    index.write_text(html)
     (OUT / ".nojekyll").write_text("")
     print(f"Built _site: latest {latest_day}, {len(days)} days, {len(series)} currencies, "
           f"{len(spikes)} one-day BOT typos excluded")

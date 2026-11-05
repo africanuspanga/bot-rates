@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var BASE = new URL(".", location.href.split("#")[0]).href;
+  var BASE = new URL(".", document.baseURI).href;
   var STATS = ["USD", "EUR", "GBP", "KES"];
   var POPULAR = ["USD", "EUR", "GBP", "KES", "UGX", "RWF", "ZAR", "AED", "CNY", "INR", "JPY", "CHF", "SAR", "BIF", "ZMW", "MWK"];
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -55,7 +55,7 @@
   }
   function inlineReceipt() {
     // Inline the SVG so it uses the page's mono font instead of a system fallback
-    fetch(BASE + "receipt.svg").then(function (r) { return r.ok ? r.text() : null; }).then(function (svg) {
+    fetch(BASE + "receipt.svg?v=" + Date.now().toString(36).slice(0, -4)).then(function (r) { return r.ok ? r.text() : null; }).then(function (svg) {
       if (svg && svg.indexOf("<svg") === 0) $("receipt").innerHTML = svg;
     }, function () {});
   }
@@ -282,6 +282,12 @@
 
   /* ---------- wiring ---------- */
   document.addEventListener("click", function (e) {
+    // In-page links: scroll here instead of following <base> to another URL
+    var a = e.target.closest('a[href^="#"]');
+    if (a && a.getAttribute("href").length > 1) {
+      var target = document.getElementById(a.getAttribute("href").slice(1));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); history.replaceState(null, "", "#" + target.id); }
+    }
     var c = e.target.closest("[data-copy],[data-copy-from]");
     if (c) copy(c.dataset.copy || $(c.dataset.copyFrom).textContent, c.dataset.copyFrom === "wsnippet" ? "Widget code" : c.dataset.copy ? "Link" : "Code");
     if (e.target.closest("[data-copy-agent]")) copy(agentPrompt(), "Agent prompt");

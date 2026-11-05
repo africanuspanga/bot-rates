@@ -8,9 +8,9 @@
   var BASE = script ? new URL(".", script.src).href : "";
 
   var THEMES = {
-    paper: { bg: "#F6F4EA", fg: "#2C3837", muted: "#626A66", line: "rgba(44,56,55,.1)", edge: "rgba(44,56,55,.12)", accent: "#B4471F", stamp: "#E0643B" },
-    plain: { bg: "#FFFFFF", fg: "#1F2726", muted: "#646B68", line: "rgba(0,0,0,.08)", edge: "rgba(0,0,0,.1)", accent: "#B4471F", stamp: "#E0643B" },
-    dark:  { bg: "#253030", fg: "#ECEADB", muted: "#959B94", line: "rgba(236,234,219,.09)", edge: "rgba(236,234,219,.12)", accent: "#F08A62", stamp: "#E8784F" }
+    paper: { bg: "#FFFFFF", fg: "#0A0A0A", muted: "#6B6B6B", line: "#EAEAEA", edge: "#EAEAEA", accent: "#0A0A0A", stamp: "#0A0A0A" },
+    plain: { bg: "#FAFAFA", fg: "#0A0A0A", muted: "#6B6B6B", line: "#EAEAEA", edge: "#E0E0E0", accent: "#0A0A0A", stamp: "#0A0A0A" },
+    dark:  { bg: "#0A0A0A", fg: "#EDEDED", muted: "#8F8F8F", line: "#262626", edge: "#262626", accent: "#EDEDED", stamp: "#EDEDED" }
   };
   THEMES.soft = THEMES.paper; THEMES.light = THEMES.plain; THEMES.board = THEMES.dark;  // names used by earlier snippets
   var MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];

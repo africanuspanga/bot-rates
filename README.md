@@ -14,7 +14,7 @@ static JSON/CSV files plus a copy-paste website widget on GitHub Pages.
 
 ## API
 
-Replace `BASE` with the Pages URL, e.g. `https://africanuspanga.github.io/bot-rates/`.
+`BASE` is `https://www.driftmark.co.tz/exchange-rates/` (served from GitHub Pages through a rewrite on driftmark.co.tz).
 
 | What | URL |
 |---|---|

@@ -18,6 +18,9 @@ concurrency:
   group: update-rates
   cancel-in-progress: false
 
+env:
+  SITE_URL: https://www.driftmark.co.tz/exchange-rates/
+
 jobs:
   update:
     runs-on: ubuntu-latest
