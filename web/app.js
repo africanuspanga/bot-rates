@@ -286,7 +286,7 @@
     var a = e.target.closest('a[href^="#"]');
     if (a && a.getAttribute("href").length > 1) {
       var target = document.getElementById(a.getAttribute("href").slice(1));
-      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); history.replaceState(null, "", "#" + target.id); }
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); history.replaceState(null, "", location.pathname + location.search + "#" + target.id); }
     }
     var c = e.target.closest("[data-copy],[data-copy-from]");
     if (c) copy(c.dataset.copy || $(c.dataset.copyFrom).textContent, c.dataset.copyFrom === "wsnippet" ? "Widget code" : c.dataset.copy ? "Link" : "Code");
